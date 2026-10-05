@@ -29,14 +29,15 @@ def _ffmpeg_to_wav(src: Path, dst: Path, ffmpeg: str | None = None) -> None:
     cmd = [exe, "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src),
            "-vn", "-ac", "1", "-ar", str(audio.SAMPLE_RATE), "-c:a", "pcm_s16le", str(dst)]
     try:
-        r = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=FFMPEG_TIMEOUT_S)
+        r = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=FFMPEG_TIMEOUT_S,
+                           check=False)
     except subprocess.TimeoutExpired:
         raise EngineError("ffmpeg demorou demais para converter o arquivo") from None
     if r.returncode != 0 or not dst.is_file():
         raise EngineError(f"ffmpeg não conseguiu converter o arquivo (código {r.returncode})")
 
 
-def load_audio(src: Path, ffmpeg: str | None = None):  # noqa: ANN201 - np.ndarray
+def load_audio(src: Path, ffmpeg: str | None = None):
     """Áudio 16 kHz mono int16 de qualquer arquivo (WAV direto, resto via ffmpeg)."""
     if src.suffix.lower() == ".wav":
         try:

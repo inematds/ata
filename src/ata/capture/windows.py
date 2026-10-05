@@ -148,7 +148,8 @@ class WavWriter:
         self.path = Path(path)
         self.rate = rate
         self.samples = 0
-        self._w = wave.open(str(self.path), "wb")
+        self._f = open(self.path, "wb")
+        self._w = wave.open(self._f, "wb")
         self._w.setnchannels(1)
         self._w.setsampwidth(2)
         self._w.setframerate(rate)
@@ -157,6 +158,7 @@ class WavWriter:
         data = audio.to_int16(np.asarray(samples))
         if len(data):
             self._w.writeframes(data.astype("<i2").tobytes())
+            self._f.flush()   # leitores (modo ao vivo) veem o arquivo crescendo
             self.samples += len(data)
 
     def pad(self, n: int) -> None:
@@ -166,6 +168,7 @@ class WavWriter:
     def close(self) -> None:
         if self._w is not None:
             self._w.close()
+            self._f.close()
             self._w = None  # type: ignore[assignment]
 
 

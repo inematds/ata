@@ -1,8 +1,15 @@
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from ata.pipeline.turns import (FLIP_MAX_S, MAX_GAP_S, assign_speaker, build_turns, first_appearance_labels,
-                                smooth_turns, speaker_stats)
+from ata.pipeline.turns import (
+    FLIP_MAX_S,
+    MAX_GAP_S,
+    assign_speaker,
+    build_turns,
+    first_appearance_labels,
+    smooth_turns,
+    speaker_stats,
+)
 from ata.types import Span, Turn, Word
 
 PROPS = settings(max_examples=60, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture])

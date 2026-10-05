@@ -7,8 +7,8 @@ hesitação: seguidos de vírgula/reticências, repetidos ("é é") ou sozinhos 
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from .. import i18n
 
@@ -60,18 +60,18 @@ def _strip_fillers(text: str, fillers: tuple[str, ...], ambiguous: frozenset[str
         body = _word_re(f)
         if f in ambiguous:
             # repetido ("é é"), seguido de vírgula/reticências, ou o turno inteiro
-            text = re.sub(rf"{_B}{body}(?:\s+{body})+{_E}[,.…]*", " ", text, flags=re.I)
-            text = re.sub(rf"{_B}{body}{_E}\s*(?:,|\.\.\.|…)", " ", text, flags=re.I)
-            if re.fullmatch(rf"\s*{body}\s*[.?!,…]*\s*", text, flags=re.I):
+            text = re.sub(rf"{_B}{body}(?:\s+{body})+{_E}[,.…]*", " ", text, flags=re.IGNORECASE)
+            text = re.sub(rf"{_B}{body}{_E}\s*(?:,|\.\.\.|…)", " ", text, flags=re.IGNORECASE)
+            if re.fullmatch(rf"\s*{body}\s*[.?!,…]*\s*", text, flags=re.IGNORECASE):
                 text = ""
         else:
-            text = re.sub(rf"{_B}{body}{_E}(?:\s*[,…]|\.\.\.)?", " ", text, flags=re.I)
+            text = re.sub(rf"{_B}{body}{_E}(?:\s*[,…]|\.\.\.)?", " ", text, flags=re.IGNORECASE)
     return text
 
 
 def _apply_glossary(text: str, glossary: Glossary) -> str:
     for wrong, right in sorted(glossary, key=lambda g: -len(g[0])):
-        text = re.sub(rf"{_B}{_word_re(wrong)}{_E}", lambda _m, r=right: r, text, flags=re.I)
+        text = re.sub(rf"{_B}{_word_re(wrong)}{_E}", lambda _m, r=right: r, text, flags=re.IGNORECASE)
     return text
 
 
