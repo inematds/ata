@@ -75,7 +75,7 @@ class FakeBackend:
         self.language = language
 
     @classmethod
-    def from_env(cls) -> "FakeBackend":
+    def from_env(cls) -> FakeBackend:
         return cls(mode=(os.environ.get("ATA_FAKE_CAPTURE") or "meeting").strip() or "meeting")
 
     def devices(self) -> dict[str, Any]:

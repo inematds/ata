@@ -7,8 +7,16 @@ import pytest
 
 from ata import audio
 from ata.capture.base import UnsupportedPlatform
-from ata.capture.windows import (ChunkResampler, ClockMap, StartEstimator, WasapiBackend, WasapiTrack, WavWriter,
-                                 pad_samples_needed, to_mono_float)
+from ata.capture.windows import (
+    ChunkResampler,
+    ClockMap,
+    StartEstimator,
+    WasapiBackend,
+    WasapiTrack,
+    WavWriter,
+    pad_samples_needed,
+    to_mono_float,
+)
 
 
 def test_clock_map():

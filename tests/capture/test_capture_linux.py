@@ -39,6 +39,16 @@ def backend(config=None, **kw):
                            startup_check_s=kw.pop("startup_check_s", 0.4), **kw)
 
 
+def wait_files(d, names=("far.wav", "mic.wav"), timeout=5.0):
+    """O fake importa numpy antes de escrever: espera os WAVs existirem antes do SIGINT (evita flake)."""
+    import time
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        if all((Path(d) / n).is_file() and (Path(d) / n).stat().st_size > 44 for n in names):
+            return
+        time.sleep(0.02)
+
+
 def plan(monkeypatch, **p):
     monkeypatch.setenv("FAKE_PW_PLAN", json.dumps(p))
 
@@ -85,6 +95,7 @@ def test_start_stop_measures_lag(tmp_path, monkeypatch):
     bdir = tmp_path / "b"
     bdir.mkdir()
     h = backend().start(bdir)
+    wait_files(bdir)
     assert h.poll() is None
     assert set(h.preview()) == {"far", "mic"} and not h.preview()["far"].start_measured
     tracks = h.stop()
@@ -104,6 +115,7 @@ def test_start_stop_measures_lag(tmp_path, monkeypatch):
 def test_no_leak_means_unmeasured(tmp_path, monkeypatch):
     plan(monkeypatch, mic="own")
     h = backend().start(tmp_path)
+    wait_files(tmp_path)
     tracks = h.stop()
     assert not tracks["far"].start_measured and not tracks["mic"].start_measured
     meta = bundle.BundleMeta(name="x", created_at="t", tracks=tracks)
@@ -112,7 +124,9 @@ def test_no_leak_means_unmeasured(tmp_path, monkeypatch):
 
 def test_silent_far(tmp_path, monkeypatch):
     plan(monkeypatch, far="silence", mic="own")
-    tracks = backend().start(tmp_path).stop()
+    h = backend().start(tmp_path)
+    wait_files(tmp_path)
+    tracks = h.stop()
     assert tracks["far"].silent is True and tracks["mic"].silent is False
     meta = bundle.BundleMeta(name="x", created_at="t", tracks=tracks)
     assert "far_silent" in bundle.damage_report(meta, tmp_path)
@@ -133,6 +147,7 @@ def test_pw_record_missing(tmp_path, monkeypatch):
 def test_sigkill_when_sigint_ignored(tmp_path, monkeypatch):
     plan(monkeypatch, mode="ignore_sigint")
     h = backend(stop_timeout_s=0.5).start(tmp_path)
+    wait_files(tmp_path)
     tracks = h.stop()
     assert "recorder_killed" in h.damage_reasons
     assert tracks["far"].samples == 48000        # arquivo continua utilizável
@@ -141,6 +156,7 @@ def test_sigkill_when_sigint_ignored(tmp_path, monkeypatch):
 def test_poll_detects_dead_track(tmp_path, monkeypatch):
     plan(monkeypatch)
     h = backend().start(tmp_path)
+    wait_files(tmp_path)
     h.procs["mic"].kill()
     h.procs["mic"].wait()
     assert "mic" in (h.poll() or "")

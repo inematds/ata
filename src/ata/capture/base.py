@@ -89,7 +89,7 @@ def device_listing(backend: str, *, available: bool, far: dict[str, Any] | None 
     return out
 
 
-def configured_target(config: "Config | None", track: str) -> tuple[str | None, str]:
+def configured_target(config: Config | None, track: str) -> tuple[str | None, str]:
     """Dispositivo escolhido para ``track`` ("far"/"mic"): env ``ATA_FAR_TARGET``/``ATA_MIC_TARGET`` vence
     ``[audio] far_device/mic_device`` da config. Devolve ``(nome|None, origem)`` com origem env|config|default."""
     env = os.environ.get(f"ATA_{track.upper()}_TARGET")
@@ -177,7 +177,7 @@ def finalize_track(bundle_dir: Path, file: str, *, device: str, start_epoch: flo
                  sample_rate=audio.SAMPLE_RATE, samples=samples, silent=silent or force_silent)
 
 
-def backend_for_platform(platform: str | None = None, config: "Config | None" = None) -> CaptureBackend:
+def backend_for_platform(platform: str | None = None, config: Config | None = None) -> CaptureBackend:
     """Backend de captura para a plataforma (``sys.platform`` por padrão).
 
     ``ATA_CAPTURE=fake`` -> FakeBackend; ``ATA_CAPTURE=linux|windows|macos`` força um backend real.

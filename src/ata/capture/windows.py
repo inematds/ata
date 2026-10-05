@@ -25,16 +25,24 @@ import sys
 import threading
 import time
 import wave
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from .. import audio
 from ..bundle import Track
-from .base import (FAR_FILE, MIC_FILE, CaptureError, CaptureMissing, UnsupportedPlatform, device_listing,
-                   finalize_track)
+from .base import (
+    FAR_FILE,
+    MIC_FILE,
+    CaptureError,
+    CaptureMissing,
+    UnsupportedPlatform,
+    device_listing,
+    finalize_track,
+)
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -59,7 +67,7 @@ class ClockMap:
 
     @classmethod
     def capture(cls, time_fn: Callable[[], float] = time.time,
-                perf_fn: Callable[[], float] = time.perf_counter) -> "ClockMap":
+                perf_fn: Callable[[], float] = time.perf_counter) -> ClockMap:
         p1 = perf_fn()
         e = time_fn()
         p2 = perf_fn()
@@ -290,7 +298,7 @@ class WasapiBackend:
     name = "windows-wasapi"
     recorder_name = "ata-windows-wasapi"
 
-    def __init__(self, config: "Config | None" = None, *, pyaudio_module: Any = None,
+    def __init__(self, config: Config | None = None, *, pyaudio_module: Any = None,
                  time_fn: Callable[[], float] = time.time, perf_fn: Callable[[], float] = time.perf_counter
                  ) -> None:
         self.config = config
@@ -357,7 +365,7 @@ class WasapiBackend:
                 tracks[track] = t
                 perf = self.perf_fn
 
-                def callback(in_data, frame_count, time_info, status, _t=t, _perf=perf):  # noqa: ANN001
+                def callback(in_data, frame_count, time_info, status, _t=t, _perf=perf):
                     _t.on_audio(in_data, _perf())
                     return (None, mod.paContinue)
 

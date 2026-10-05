@@ -30,9 +30,10 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from . import __version__, bundle, i18n
 from .capture.base import CaptureError, CaptureMissing, backend_for_platform, clean_reasons, finalize_track
@@ -237,6 +238,7 @@ def _settle_dead(config: Config, st: dict[str, Any]) -> bool:
         if recover_bundle(bdir):
             log.warning("supervisor %s morreu; bundle recuperado com recorder_killed", pid)
     _clear_state(config, pid)
+    (config.cache / REQUEST_DIR / f"{bdir.name}.json").unlink(missing_ok=True)
     return clean
 
 

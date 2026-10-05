@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from ..config import Config
 
 
-def list_devices(config: "Config | None" = None, platform: str | None = None) -> dict[str, Any]:
+def list_devices(config: Config | None = None, platform: str | None = None) -> dict[str, Any]:
     try:
         backend = backend_for_platform(platform, config)
     except CaptureError as exc:

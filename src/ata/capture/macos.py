@@ -29,16 +29,25 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Sequence
+from typing import IO, TYPE_CHECKING, Any
 
 import numpy as np
 
 from .. import audio
 from ..bundle import Track
-from .base import (FAR_FILE, MIC_FILE, CaptureError, CaptureMissing, UnsupportedPlatform, configured_target,
-                   device_listing, finalize_track)
+from .base import (
+    FAR_FILE,
+    MIC_FILE,
+    CaptureError,
+    CaptureMissing,
+    UnsupportedPlatform,
+    configured_target,
+    device_listing,
+    finalize_track,
+)
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -224,7 +233,7 @@ class MacHelperBackend:
     name = "macos-coreaudio-tap"
     recorder_name = "ata-macos-tap"
 
-    def __init__(self, config: "Config | None" = None, *, helper: Sequence[str] | None = None,
+    def __init__(self, config: Config | None = None, *, helper: Sequence[str] | None = None,
                  startup_timeout_s: float = 5.0, stop_timeout_s: float = 10.0) -> None:
         self.config = config
         self._helper = tuple(helper) if helper else None

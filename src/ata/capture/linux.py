@@ -22,13 +22,23 @@ import signal
 import subprocess
 import tempfile
 import time
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, Callable, Sequence
+from typing import IO, TYPE_CHECKING, Any
 
 from .. import audio
 from ..bundle import Track
-from .base import (FAR_FILE, MIC_FILE, CaptureError, CaptureMissing, configured_target, device_listing,
-                   find_first_sound, finalize_track, read_window)
+from .base import (
+    FAR_FILE,
+    MIC_FILE,
+    CaptureError,
+    CaptureMissing,
+    configured_target,
+    device_listing,
+    finalize_track,
+    find_first_sound,
+    read_window,
+)
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -168,7 +178,7 @@ class PipeWireBackend:
     name = "linux-pipewire"
     recorder_name = "ata-linux-pw"
 
-    def __init__(self, config: "Config | None" = None, *, pw_record: Sequence[str] = ("pw-record",),
+    def __init__(self, config: Config | None = None, *, pw_record: Sequence[str] = ("pw-record",),
                  wpctl: Sequence[str] = ("wpctl",), runner: Runner = subprocess.run,
                  clock: Callable[[], float] = time.time, startup_check_s: float = 0.3,
                  stop_timeout_s: float = 5.0) -> None:
