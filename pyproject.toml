@@ -1,0 +1,48 @@
+[project]
+name = "ata"
+version = "0.1.0"
+description = "Ata: notas de reunião local-first. Grava a call em duas faixas, transcreve na sua máquina (GPU ou CPU) em português, inglês ou espanhol e entrega uma nota com cada fala por pessoa, resumo, busca e MCP."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "INEMA", email = "inematds@gmail.com" }]
+requires-python = ">=3.12"
+keywords = ["meeting-notes", "transcription", "diarization", "local-first", "pt-BR", "mcp", "parakeet", "nemotron"]
+dependencies = [
+    "numpy>=2.0",
+]
+
+[project.optional-dependencies]
+# motor CPU em processo (Parakeet via onnx-asr + diarização sherpa-onnx)
+onnx = ["onnx-asr[cpu,hub]>=0.12", "sherpa-onnx>=1.13", "soxr>=0.5"]
+# servidor MCP
+mcp = ["mcp>=1.2"]
+# cliente WebSocket do modo ao vivo (sidecar NeMo-Speech.cpp)
+live = ["websockets>=13"]
+# captura no Windows (WASAPI loopback)
+windows = ["PyAudioWPatch>=0.2.12; sys_platform == 'win32'"]
+all = ["ata[onnx,mcp,live,windows]"]
+
+[dependency-groups]
+dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.6", "mcp>=1.2", "websockets>=13"]
+
+[project.scripts]
+ata = "ata.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ata"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "linux_audio: precisa de PipeWire real (pulado sem pw-record)",
+    "slow: baixa ou roda modelos (fora da suíte padrão)",
+]
+addopts = "-m 'not slow and not linux_audio'"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
