@@ -1,0 +1,66 @@
+:root {
+  --bg: #f7f6f2; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6a66; --line: #e2e0d9;
+  --accent: #b86e00; --accent-ink: #ffffff; --danger: #b3261e; --hl: #fff1d6;
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141412; --panel: #1d1d1a; --text: #ecebe6; --muted: #9b9a94; --line: #33322e;
+    --accent: #f0a330; --accent-ink: #1a1200; --danger: #f2766d; --hl: #3a2c10;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141412; --panel: #1d1d1a; --text: #ecebe6; --muted: #9b9a94; --line: #33322e;
+  --accent: #f0a330; --accent-ink: #1a1200; --danger: #f2766d; --hl: #3a2c10;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 18px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.dot.on { background: var(--danger); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+nav { display: flex; flex-wrap: wrap; gap: 4px; }
+nav button, .ghost { background: transparent; color: var(--text); border: 1px solid transparent; }
+nav button.active { border-color: var(--line); background: var(--bg); }
+button { font: inherit; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line);
+  background: var(--panel); color: var(--text); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.danger { color: var(--danger); border-color: var(--danger); }
+button:disabled { opacity: .45; cursor: default; }
+input, select { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel); color: var(--text); min-width: 0; }
+.prefs { display: flex; gap: 6px; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.view { display: none; } .view.active { display: block; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.status-card { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; }
+.rec-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+.list { list-style: none; margin: 8px 0; padding: 0; }
+.list li { padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.list li:hover, .list li.sel { background: var(--hl); }
+.list small { color: var(--muted); display: block; }
+.split { display: grid; grid-template-columns: 300px 1fr; gap: 16px; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+.row { display: flex; gap: 8px; } .row input { flex: 1; }
+.turns { list-style: none; padding: 0; margin: 0; }
+.turns li { display: grid; grid-template-columns: 56px 110px 1fr; gap: 8px; padding: 6px 4px;
+  border-bottom: 1px dashed var(--line); cursor: pointer; }
+.turns li.playing { background: var(--hl); }
+.turns .t { font-family: var(--mono); color: var(--muted); }
+.turns .who { font-weight: 600; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .turns li { grid-template-columns: 48px 1fr; } .turns .txt { grid-column: 1 / -1; } }
+.speakers { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.speakers label { display: flex; gap: 4px; align-items: center; }
+.speakers input { width: 140px; }
+.sum h3 { margin: 14px 0 4px; font-size: 15px; }
+.sum ul { margin: 0; padding-left: 20px; }
+pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow: auto;
+  max-height: 420px; font-family: var(--mono); font-size: 13px; }
+.badge { font-size: 12px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--line); margin-left: 6px; }
+.badge.warn { border-color: var(--danger); color: var(--danger); }
+.players { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }

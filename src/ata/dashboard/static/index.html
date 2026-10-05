@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ata</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="dot" id="rec-dot"></span><strong>Ata</strong></div>
+    <nav id="tabs">
+      <button data-view="overview" data-i18n="nav_overview" class="active">Visão geral</button>
+      <button data-view="meetings" data-i18n="nav_meetings">Reuniões</button>
+      <button data-view="search" data-i18n="nav_search">Busca</button>
+      <button data-view="live" data-i18n="nav_live">Ao vivo</button>
+      <button data-view="settings" data-i18n="nav_settings">Configurações</button>
+    </nav>
+    <div class="prefs">
+      <select id="lang" aria-label="idioma">
+        <option value="pt-BR">PT</option><option value="en">EN</option><option value="es">ES</option>
+      </select>
+      <button id="theme" type="button" aria-label="tema">◐</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="view-overview" class="view active">
+      <div class="card status-card">
+        <div>
+          <h2 data-i18n="status">Estado</h2>
+          <p id="status-text" class="muted">…</p>
+        </div>
+        <div class="rec-controls">
+          <input id="rec-title" type="text" data-i18n-ph="title_ph" placeholder="Título (opcional)">
+          <button id="rec-start" class="primary" data-i18n="record">Gravar</button>
+          <button id="rec-stop" class="danger" data-i18n="stop">Parar</button>
+        </div>
+      </div>
+      <h2 data-i18n="latest">Últimas reuniões</h2>
+      <ul id="latest" class="list"></ul>
+    </section>
+
+    <section id="view-meetings" class="view">
+      <div class="split">
+        <aside>
+          <input id="filter" type="search" data-i18n-ph="filter_ph" placeholder="Filtrar por título">
+          <ul id="meeting-list" class="list"></ul>
+          <button id="more" class="ghost hidden" data-i18n="more">Mais</button>
+        </aside>
+        <article id="detail" class="card">
+          <p class="muted" data-i18n="pick">Escolha uma reunião.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-search" class="view">
+      <form id="search-form" class="row">
+        <input id="q" type="search" data-i18n-ph="search_ph" placeholder="O que foi dito sobre…">
+        <button class="primary" data-i18n="search_btn">Buscar</button>
+      </form>
+      <p id="search-meta" class="muted"></p>
+      <ul id="results" class="list"></ul>
+    </section>
+
+    <section id="view-live" class="view">
+      <h2 data-i18n="live_title">Ao vivo</h2>
+      <p id="live-meta" class="muted" data-i18n="live_wait">Aguardando turnos…</p>
+      <ol id="live-turns" class="turns"></ol>
+    </section>
+
+    <section id="view-settings" class="view">
+      <h2 data-i18n="settings">Configurações</h2>
+      <p class="muted" data-i18n="settings_ro">Somente leitura. Edite o arquivo de config ou use `ata setup`.</p>
+      <p><span data-i18n="config_file">Arquivo</span>: <code id="config-src"></code></p>
+      <pre id="config"></pre>
+      <button id="doctor-btn" class="ghost" data-i18n="doctor">Rodar diagnóstico (doctor)</button>
+      <pre id="doctor"></pre>
+    </section>
+  </main>
+  <audio id="player" preload="none"></audio>
+  <script src="/app.js"></script>
+</body>
+</html>

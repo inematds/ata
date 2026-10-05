@@ -1,0 +1,159 @@
+# Manifesto de downloads do `ata engine install` (motor NeMo-Speech.cpp + modelos).
+#
+# Fontes (PESQUISA-ESTADO-DA-ARTE.md, verificadas em 05/10/2026):
+#   https://github.com/NVIDIA/NeMo-Speech.cpp (README, docs/install.md, docs/api.md, scripts/install.sh)
+#   https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3            CC-BY-4.0
+#   https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b  OpenMDW-1.1
+#   https://huggingface.co/nvidia/nemotron-3-diarization           OpenMDW-1.1
+#   https://github.com/k2-fsa/sherpa-onnx/releases (speaker-segmentation-models / speaker-recongition-models)
+#
+# IMPORTANTE: os nomes exatos dos arquivos dos releases e os sha256 ainda NÃO foram conferidos numa
+# instalação real (o usuário pediu para não baixar modelos nesta fase). Onde não sabemos, fica
+# `sha256 = ""` + `verify = "on-first-download"`: o `ata engine install` RECUSA baixar esses itens a menos
+# que se passe `--allow-unverified` (aí ele mostra o sha256 obtido para ser colado aqui).
+# Campos de cada item: name, role, url, sha256, size_mb, license, languages, verify, file.
+
+schema = "ata-models/1"
+
+[release]
+project = "NVIDIA/NeMo-Speech.cpp"
+version = "latest"
+# {release_path} = "latest/download" (version = "latest") ou "download/<tag>"; {archive} = nome do
+# archive; {ext} = tar.gz ou zip. Padrão de nome assumido a partir do install.sh (archives
+# `linux-aarch64-cuda12/13`); conferir na 1ª instalação.
+url_template = "https://github.com/NVIDIA/NeMo-Speech.cpp/releases/{release_path}/nemo-speech-{archive}.{ext}"
+binary = "nemo-speech"
+# argumentos do `serve` (placeholders {host} {port} {models}); suposição documentada em engines/nemo.py
+serve_args = ["serve", "--host", "{host}", "--port", "{port}", "--models-dir", "{models}"]
+health_paths = ["/health", "/v1/models"]
+
+[[archive]]
+name = "linux-aarch64-cuda13"     # DGX Spark / GB10, driver >= 580
+os = "linux"
+arch = "aarch64"
+backend = "cuda13"
+url = ""                          # vazio = usa url_template
+sha256 = ""
+verify = "on-first-download"
+size_mb = 120
+license = "Apache-2.0"
+
+[[archive]]
+name = "linux-aarch64-cuda12"
+os = "linux"
+arch = "aarch64"
+backend = "cuda12"
+url = ""
+sha256 = ""
+verify = "on-first-download"
+size_mb = 120
+license = "Apache-2.0"
+
+[[archive]]
+name = "linux-x86_64-cpu"
+os = "linux"
+arch = "x86_64"
+backend = "cpu"
+url = ""
+sha256 = ""
+verify = "on-first-download"
+size_mb = 25
+license = "Apache-2.0"
+
+[[archive]]
+name = "macos-aarch64-metal"
+os = "darwin"
+arch = "arm64"
+backend = "metal"
+url = ""
+sha256 = ""
+verify = "on-first-download"
+size_mb = 25
+license = "Apache-2.0"
+
+[[archive]]
+name = "windows-x86_64-cpu"
+os = "win32"
+arch = "amd64"
+backend = "cpu"
+url = ""
+sha256 = ""
+verify = "on-first-download"
+size_mb = 25
+license = "Apache-2.0"
+format = "zip"
+
+# ---------------------------------------------------------------- modelos do sidecar (ggml/GGUF)
+# As URLs apontam para os repositórios oficiais; o nome do arquivo convertido para o NeMo-Speech.cpp
+# é suposição (o README fala em conversão/download pelo próprio `nemo-speech`). Conferir na 1ª instalação.
+
+[[model]]
+name = "parakeet-tdt-0.6b-v3"
+role = "asr"
+file = "parakeet-tdt-0.6b-v3.gguf"
+url = "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3/resolve/main/parakeet-tdt-0.6b-v3.gguf"
+sha256 = ""
+verify = "on-first-download"
+size_mb = 640
+license = "CC-BY-4.0"
+languages = ["pt-BR", "en", "es"]   # 25 idiomas europeus; FLEURS pt 4,76 / es 3,45 / en 4,85
+
+[[model]]
+name = "nemotron-3.5-asr-streaming-0.6b"
+role = "streaming"
+file = "nemotron-3.5-asr-streaming-0.6b.gguf"
+url = "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/resolve/main/nemotron-3.5-asr-streaming-0.6b.gguf"
+sha256 = ""
+verify = "on-first-download"
+size_mb = 650
+license = "OpenMDW-1.1"
+languages = ["pt-BR", "en", "es"]   # 19 locales; chunks 80 ms a 1,12 s
+
+[[model]]
+name = "nemotron-3-diarization"
+role = "diarizer"
+file = "nemotron-3-diarization.gguf"
+url = "https://huggingface.co/nvidia/nemotron-3-diarization/resolve/main/nemotron-3-diarization.gguf"
+sha256 = ""
+verify = "on-first-download"
+size_mb = 500
+license = "OpenMDW-1.1"
+languages = ["*"]                   # até 8 falantes, streaming + offline
+
+[[model]]
+name = "silero-vad"
+role = "vad"
+file = "silero_vad.onnx"
+url = "https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx"
+sha256 = ""
+verify = "on-first-download"
+size_mb = 2
+license = "MIT"
+languages = ["*"]
+
+# ---------------------------------------------------------------- modelos do motor CPU (sherpa-onnx)
+# Instalados com `ata engine install --onnx`. O ASR do motor onnx (onnx-asr) baixa o próprio modelo do
+# Hugging Face Hub na primeira execução (`onnx_asr.load_model("nemo-parakeet-tdt-0.6b-v3")`).
+
+[[model]]
+name = "pyannote-segmentation-3.0"
+role = "onnx-segmentation"
+file = "sherpa-onnx-pyannote-segmentation-3-0/model.onnx"
+archive = "tar.bz2"
+url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2"
+sha256 = ""
+verify = "on-first-download"
+size_mb = 6
+license = "MIT"
+languages = ["*"]
+
+[[model]]
+name = "wespeaker-resnet34-lm"
+role = "onnx-embedding"
+file = "wespeaker_en_voxceleb_resnet34_LM.onnx"
+url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/wespeaker_en_voxceleb_resnet34_LM.onnx"
+sha256 = ""
+verify = "on-first-download"
+size_mb = 26
+license = "CC-BY-4.0"
+languages = ["*"]
