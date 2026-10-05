@@ -13,7 +13,8 @@ Suposições sobre a API (a pesquisa verificou só os parâmetros do WebSocket �
   ``word_timestamps=true``), ``diarize=true|false`` (+ ``speaker_diarization`` e ``max_speakers`` quando > 0).
 * Resposta: ``words`` no topo e/ou ``segments[].words``; palavra = ``word``|``text``; tempo =
   ``start``/``end`` | ``start_time``/``end_time`` | ``start_ms``/``end_ms`` | ``offset``/``duration``
-  (valores > 10000 em campo sem unidade são tratados como ms); confiança = ``confidence``|``probability``|``score``.
+  (unidade dos campos sem sufixo decidida uma vez por resposta: ms se o maior tempo passa da duração do
+  áudio, ou de 10 000 sem duração conhecida); confiança = ``confidence``|``probability``|``score``.
 * Falante: ``speaker``|``speaker_id``|``spk`` em segmentos ou palavras; inteiros (ou dígitos) com mínimo 1 são
   1-based -> ``S{n-1}``; ``SPEAKER_00``/``speaker_0`` -> ``S0``; outros rótulos -> ``S0``, ``S1``... na ordem.
 * Saúde: ``GET /health`` e, se não houver, ``GET /v1/models``.
@@ -31,9 +32,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
+from .. import audio
 from ..config import Config
 from ..types import Span, Word
 from .base import EngineError, EngineMissing
@@ -113,6 +116,8 @@ def health(config: Config, timeout: float = 3.0) -> dict[str, Any]:
         except EngineError as exc:
             if str(exc) == NOT_RUNNING:
                 return {"ok": False, "path": None, "info": {}, "error": NOT_RUNNING}
+            if "não é JSON" in str(exc):       # 2xx com corpo texto ("ok") também é saudável
+                return {"ok": True, "path": path, "info": {}}
             continue
     return {"ok": False, "path": None, "info": {}, "error": "sem /health nem /v1/models"}
 
@@ -149,10 +154,11 @@ def _num(d: dict[str, Any], *keys: str) -> float | None:
     return None
 
 
-def _times(d: dict[str, Any]) -> tuple[float, float] | None:
+def _raw_times(d: dict[str, Any]) -> tuple[float, float, bool] | None:
+    """(início, fim, já_em_ms_explícito) sem escalar."""
     ms_start, ms_end = _num(d, "start_ms", "startMs"), _num(d, "end_ms", "endMs")
     if ms_start is not None and ms_end is not None:
-        return ms_start / 1000.0, ms_end / 1000.0
+        return ms_start, ms_end, True
     start = _num(d, "start", "start_time", "startTime", "begin", "offset")
     end = _num(d, "end", "end_time", "endTime")
     if end is None and start is not None:
@@ -160,8 +166,28 @@ def _times(d: dict[str, Any]) -> tuple[float, float] | None:
         end = start + dur if dur is not None else None
     if start is None or end is None:
         return None
-    if start > 1e4 or end > 1e4:     # sem unidade e grande demais para segundos de reunião -> ms
-        start, end = start / 1000.0, end / 1000.0
+    return start, end, False
+
+
+def unit_scale(dicts: list[dict[str, Any]], duration: float | None = None) -> float:
+    """Unidade dos campos sem unidade, decidida UMA vez por resposta: 0.001 (ms) se o maior tempo passa da
+    duração do áudio (+50 %) ou, sem duração conhecida, de 10 000; senão 1 (segundos)."""
+    ends = [t[1] for t in (_raw_times(d) for d in dicts) if t is not None and not t[2]]
+    if not ends:
+        return 1.0
+    top = max(ends)
+    if duration is not None and duration > 0:
+        return 0.001 if top > duration * 100 and top / 1000.0 <= duration * 1.5 + 1.0 else 1.0
+    return 0.001 if top > 1e4 else 1.0
+
+
+def _times(d: dict[str, Any], scale: float = 1.0) -> tuple[float, float] | None:
+    raw = _raw_times(d)
+    if raw is None:
+        return None
+    start, end, is_ms = raw
+    k = 0.001 if is_ms else scale
+    start, end = start * k, end * k
     return start, max(start, end)
 
 
@@ -232,10 +258,12 @@ def _word_dicts(resp: dict[str, Any]) -> list[tuple[dict[str, Any], Any]]:
     return out
 
 
-def parse_words(resp: dict[str, Any]) -> list[Word]:
+def parse_words(resp: dict[str, Any], duration: float | None = None) -> list[Word]:
+    pairs = _word_dicts(resp)
+    scale = unit_scale([d for d, _ in pairs], duration)
     words: list[Word] = []
-    for d, _ in _word_dicts(resp):
-        text, times = _text(d), _times(d)
+    for d, _ in pairs:
+        text, times = _text(d), _times(d, scale)
         if not text or times is None:
             continue
         conf = _num(d, "confidence", "probability", "score")
@@ -244,21 +272,23 @@ def parse_words(resp: dict[str, Any]) -> list[Word]:
     return words
 
 
-def parse_spans(resp: dict[str, Any], merge_gap: float = 0.5) -> list[Span]:
+def parse_spans(resp: dict[str, Any], merge_gap: float = 0.5, duration: float | None = None) -> list[Span]:
     """Spans de falante: segmentos com falante; senão, palavras com falante agrupadas por continuidade."""
-    segs = [s for s in _segments(resp) if _raw_speaker(s) is not None and _times(s) is not None]
+    segs = [s for s in _segments(resp) if _raw_speaker(s) is not None and _raw_times(s) is not None]
     if segs:
+        scale = unit_scale(segs, duration)
         smap = SpeakerMap([_raw_speaker(s) for s in segs])
-        spans = [Span(*_times(s), smap(_raw_speaker(s))) for s in segs]  # type: ignore[misc]
+        spans = [Span(*_times(s, scale), smap(_raw_speaker(s))) for s in segs]  # type: ignore[misc]
         return sorted(spans, key=lambda s: (s.start, s.end))
     pairs = [(d, _raw_speaker(d) if _raw_speaker(d) is not None else parent) for d, parent in _word_dicts(resp)]
-    pairs = [(d, r) for d, r in pairs if r is not None and _times(d) is not None]
+    pairs = [(d, r) for d, r in pairs if r is not None and _raw_times(d) is not None]
     if not pairs:
         return []
+    scale = unit_scale([d for d, _ in pairs], duration)
     smap = SpeakerMap([r for _, r in pairs])
+    timed = sorted(((_times(d, scale), r) for d, r in pairs), key=lambda p: p[0])  # type: ignore[arg-type,return-value]
     spans: list[Span] = []
-    for d, r in sorted(pairs, key=lambda p: _times(p[0])[0]):  # type: ignore[index]
-        a, b = _times(d)  # type: ignore[misc]
+    for (a, b), r in timed:  # type: ignore[misc]
         spk = smap(r)
         if spans and spans[-1].speaker == spk and a - spans[-1].end <= merge_gap:
             spans[-1] = Span(spans[-1].start, max(b, spans[-1].end), spk)
@@ -269,6 +299,13 @@ def parse_spans(resp: dict[str, Any], merge_gap: float = 0.5) -> list[Span]:
 
 # --------------------------------------------------------------------------------------- motores
 
+def _duration(wav: Path) -> float | None:
+    try:
+        return audio.duration(wav)
+    except (OSError, EOFError, ValueError):
+        return None
+
+
 class NemoAsr:
     name = "nemo"
 
@@ -278,7 +315,7 @@ class NemoAsr:
 
     def transcribe(self, wav: Path, language: str) -> list[Word]:
         resp = transcribe_request(self.config, Path(wav), model=self.model, language=language, diarize=False)
-        return parse_words(resp)
+        return parse_words(resp, duration=_duration(wav))
 
 
 class NemoDiarizer:
@@ -291,7 +328,7 @@ class NemoDiarizer:
     def diarize(self, wav: Path, max_speakers: int = 0) -> list[Span]:
         resp = transcribe_request(self.config, Path(wav), model=self.model, language=None, diarize=True,
                                   max_speakers=max_speakers)
-        return parse_spans(resp)
+        return parse_spans(resp, duration=_duration(wav))
 
 
 def normalize_event(msg: dict[str, Any]) -> dict[str, Any] | None:
@@ -314,8 +351,9 @@ def normalize_event(msg: dict[str, Any]) -> dict[str, Any] | None:
     if not isinstance(text, str):
         text = msg.get("transcript") if isinstance(msg.get("transcript"), str) else msg.get("delta", "")
     ev: dict[str, Any] = {"type": kind, "text": str(text or "").strip()}
-    times = _times(msg)
     words = parse_words(msg) if isinstance(msg.get("words"), list) else []
+    ws = [w for w in msg.get("words", []) if isinstance(w, dict)] if isinstance(msg.get("words"), list) else []
+    times = _times(msg, unit_scale([msg, *ws]))
     if times is None and words:
         times = (words[0].start, words[-1].end)
     ev["start"], ev["end"] = times if times else (None, None)

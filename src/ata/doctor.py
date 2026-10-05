@@ -15,9 +15,10 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 
@@ -103,7 +104,7 @@ def _writable(path: Path) -> bool:
 def run_checks(config: Config, *, skip_benchmark: bool = False, probes: Probes | None = None) -> dict[str, Any]:
     pr = probes or PROBES
     checks: list[Check] = []
-    add = lambda s, n, d: checks.append(Check(s, n, d))  # noqa: E731
+    add = lambda s, n, d: checks.append(Check(s, n, d))
     fake = registry.forced_fake()
 
     # python e plataforma

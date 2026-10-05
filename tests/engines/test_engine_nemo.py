@@ -215,3 +215,21 @@ def test_streaming_session_roundtrip(config, fake_ws):
     assert log["path"] == nemo.REALTIME_PATH and log["ended"] and log["bytes"] == 64000
     assert log["config"]["language"] == "es" and log["config"]["sample_rate"] == 16000
     assert log["config"]["word_timestamps"] is True and log["config"]["encoding"] == "pcm_s16le"
+
+
+def test_ms_unit_decided_once_per_response():
+    resp = {"words": [{"word": "a", "start": 500, "end": 800}, {"word": "b", "start": 12000, "end": 12500}]}
+    words = nemo.parse_words(resp)
+    assert [(w.start, w.end) for w in words] == [(0.5, 0.8), (12.0, 12.5)]
+    # reunião de 3 h em segundos (> 10 000) não vira ms quando a duração do áudio é conhecida
+    long = {"words": [{"word": "x", "start": 10500.0, "end": 10500.4}]}
+    assert nemo.parse_words(long, duration=3 * 3600)[0].start == 10500.0
+    assert nemo.parse_words({"words": [{"word": "y", "start": 900, "end": 1200}]}, duration=2.0)[0].end == 1.2
+    spans = nemo.parse_spans({"segments": [{"start": 0, "end": 1500, "speaker": 1},
+                                           {"start": 1500, "end": 20000, "speaker": 2}]})
+    assert [(s.start, s.end) for s in spans] == [(0.0, 1.5), (1.5, 20.0)]
+
+
+def test_health_text_body_counts(config, fake_http):
+    srv = fake_http({("GET", "/health"): (200, b"ok")})
+    assert nemo.health(_cfg(config, srv.port))["ok"]

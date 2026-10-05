@@ -23,12 +23,14 @@ import subprocess
 import sys
 import tarfile
 import time
+import urllib.error
 import urllib.request
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .config import Config
 from .data import load_manifest
@@ -203,6 +205,9 @@ def download(url: str, dest: Path, sha256: str, *, allow_unverified: bool = Fals
             mode = "ab" if have and status == 206 else "wb"
             with open(part, mode) as f:
                 shutil.copyfileobj(resp, f, 1 << 20)
+    except urllib.error.HTTPError as exc:
+        if exc.code != 416 or not have:       # 416 com parte = parte já completa: só conferir o hash
+            raise EngineError(f"falha ao baixar {dest.name} (HTTP {exc.code})") from None
     except OSError as exc:
         raise EngineError(f"falha ao baixar {dest.name} ({type(exc).__name__}); rode de novo para retomar") from None
     got = sha256_file(part)

@@ -257,3 +257,18 @@ def test_stale_state(run, config, rt, capsys):
     assert not st["running"] and st["stale_state"]
     assert run("ata.engine_cmd", ["engine", "stop"], config) == 3
     assert not (config.cache / "engine.json").exists()
+
+
+def test_download_416_with_complete_part(tmp_path):
+    import io
+    import urllib.error
+    data = b"tudo-baixado"
+    dest = tmp_path / "m.bin"
+    (tmp_path / "m.bin.part").write_bytes(data)
+    sha = hashlib.sha256(data).hexdigest()
+
+    def opener(req, timeout=60):
+        assert req.headers.get("Range") == f"bytes={len(data)}-"
+        raise urllib.error.HTTPError(req.full_url, 416, "range", {}, io.BytesIO())
+    assert ec.download("https://exemplo.invalid/m.bin", dest, sha, rt=ec.Runtime(urlopen=opener)) == sha
+    assert dest.read_bytes() == data

@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import sys
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from . import i18n
-from .config import SUMMARY_PROVIDERS, Config, DEFAULTS, default_config_path, write_config
+from .config import DEFAULTS, SUMMARY_PROVIDERS, Config, default_config_path, write_config
 
 DESTINATIONS = {"claude": "Anthropic (claude CLI, assinatura)", "codex": "OpenAI (codex CLI, assinatura)"}
 
@@ -54,7 +55,7 @@ def cmd_setup(args: Any, config: Config, *, ask: Callable[[str], str] = input,
               isatty: Callable[[], bool] | None = None) -> int:
     target = Path(getattr(args, "config", None) or config.source or default_config_path()).expanduser()
     base = _existing(target)
-    cur = lambda dotted: config.get(dotted)  # noqa: E731
+    cur = lambda dotted: config.get(dotted)
     lang = args.lang or str(cur("language.default") or "pt-BR")
     notes = args.notes or str(cur("paths.notes") or DEFAULTS["paths"]["notes"])
     recordings = args.recordings or str(cur("paths.recordings") or DEFAULTS["paths"]["recordings"])

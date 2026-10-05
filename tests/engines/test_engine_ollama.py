@@ -89,3 +89,24 @@ def test_check_object():
     assert ollama.check_object([], SCHEMA) == ["não é objeto JSON"]
     assert ollama.check_object({"language": "en"}, SCHEMA) == ["falta a chave 'tldr'"]
     assert ollama.required_keys({"properties": {"a": {}, "b": {}}}) == ["a", "b"]
+
+
+def test_registry_wiring_real_engines(config, monkeypatch, tmp_path):
+    """Com ATA_ENGINES desligado, o registry chega às fábricas reais (nenhuma faz rede ao construir)."""
+    from ata.engines import registry
+    from ata.engines.base import EngineMissing
+    monkeypatch.delenv("ATA_ENGINES")
+    assert registry.build("asr", "nemo:parakeet-tdt-0.6b-v3", config).name == "nemo"
+    assert registry.build("diarizer", "nemo", config).name == "nemo"
+    assert registry.build("streaming", "nemo", config).name == "nemo"
+    assert registry.summarizer_for(config).name == "ollama"
+    assert registry.text_embedder_for(config).name == "ollama"
+    monkeypatch.setitem(__import__("sys").modules, "onnx_asr", None)
+    with pytest.raises(EngineMissing):
+        registry.asr_fallback(config)
+    fake = tmp_path / "claude"
+    fake.write_text("#!/bin/sh\n")
+    fake.chmod(0o755)
+    monkeypatch.setenv("ATA_CLAUDE_BIN", str(fake))
+    cfg = config.with_overrides(summary__provider="claude", privacy__level=1)
+    assert registry.summarizer_for(cfg).name == "claude"

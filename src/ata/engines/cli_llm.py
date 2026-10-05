@@ -59,7 +59,7 @@ def extract_json_object(text: str) -> dict[str, Any] | None:
             return obj
     except json.JSONDecodeError:
         pass
-    for block in re.findall(r"```(?:json)?\s*(.*?)```", s, re.S):
+    for block in re.findall(r"```(?:json)?\s*(.*?)```", s, re.DOTALL):
         try:
             obj = json.loads(block.strip())
             if isinstance(obj, dict):
