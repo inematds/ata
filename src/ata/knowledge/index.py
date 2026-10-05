@@ -16,10 +16,11 @@ import logging
 import re
 import sqlite3
 import unicodedata
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 
@@ -35,6 +36,7 @@ RRF_K = 60
 CHUNK_MIN_S = 60.0
 CHUNK_MAX_S = 90.0
 EMBED_BATCH = 64
+MIN_SEMANTIC_SCORE = 0.25   # cosseno mínimo para um trecho contar como resultado semântico
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS meetings (
@@ -417,8 +419,9 @@ def _semantic(con: sqlite3.Connection, config: Config, query: str, where: str, a
         return []
     mat = np.frombuffer(b"".join(r[1] for r in rows), dtype=np.float32).reshape(len(rows), -1)
     scores = mat @ qv
+    floor = float(config.get("embeddings.min_score") or MIN_SEMANTIC_SCORE)
     order = np.argsort(-scores)[:n]
-    return [int(rows[i][0]) for i in order if scores[i] > 0]
+    return [int(rows[i][0]) for i in order if scores[i] >= floor]
 
 
 def rrf(rankings: list[list[int]], k: int = RRF_K) -> dict[int, float]:

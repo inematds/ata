@@ -24,9 +24,10 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from . import bundle, i18n
 from .config import Config

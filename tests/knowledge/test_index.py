@@ -8,7 +8,6 @@ from ata import bundle
 from ata.engines import registry
 from ata.knowledge import index as I
 from ata.types import Turn
-
 from knowledge.helpers import LINES_EN, make_meeting
 
 

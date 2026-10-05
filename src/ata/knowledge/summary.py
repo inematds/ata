@@ -14,8 +14,9 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .. import i18n
 from ..config import Config, default_config_path
@@ -220,29 +221,38 @@ def fit_lines(lines: list[str], budget: int = MAX_TRANSCRIPT_CHARS, marker: str 
     lo = (head[-1] + 1) if head else 0
     hi = tail[0] if tail else len(lines)
     middle = list(range(lo, hi))
-    mid_budget = budget - sum(len(lines[i]) + 1 for i in head + tail) - 3 * (len(marker) + 1)
+    mark = len(marker) + 1
+    mid_budget = budget - sum(len(lines[i]) + 1 for i in head + tail) - mark
     chosen: list[int] = []
     if middle and mid_budget > 0:
-        avg = max(1.0, sum(len(lines[i]) + 1 for i in middle) / len(middle))
+        # cada linha amostrada do meio custa ela + um marcador antes (as vizinhas foram omitidas)
+        avg = max(1.0, sum(len(lines[i]) + 1 for i in middle) / len(middle)) + mark
         k = max(1, min(len(middle), int(mid_budget // avg)))
         step = len(middle) / k
         used = 0
         for j in range(k):
             i = middle[int(j * step)]
-            if used + len(lines[i]) + 1 > mid_budget:
+            if used + len(lines[i]) + 1 + mark > mid_budget:
                 continue
             chosen.append(i)
-            used += len(lines[i]) + 1
-    keep = sorted(set(head + chosen + tail))
-    out: list[str] = []
-    prev = -1
-    for i in keep:
-        if i != prev + 1:
+            used += len(lines[i]) + 1 + mark
+
+    def assemble(keep_idx: list[int]) -> list[str]:
+        out: list[str] = []
+        prev = -1
+        for i in keep_idx:
+            if i != prev + 1:
+                out.append(marker)
+            out.append(lines[i])
+            prev = i
+        if prev != len(lines) - 1:
             out.append(marker)
-        out.append(lines[i])
-        prev = i
-    if prev != len(lines) - 1:
-        out.append(marker)
+        return out
+
+    out = assemble(sorted(set(head + chosen + tail)))
+    while chosen and sum(len(x) + 1 for x in out) > budget:
+        chosen = chosen[::2] if len(chosen) > 1 else []
+        out = assemble(sorted(set(head + chosen + tail)))
     return out
 
 

@@ -28,7 +28,9 @@ def _turns_from_fixtures(bdir: Path, language: str) -> list[Turn]:
     labels = {f"S{i}": i18n.other_label(language, i + 2) for i in range(8)}
     turns: list[Turn] = []
     for s in far_spans:
-        ws = [w for w in far_words if s.start - 0.01 <= w.start < s.end]
+        if s.speaker not in labels:
+            continue
+        ws =[w for w in far_words if s.start - 0.01 <= w.start < s.end]
         if ws:
             turns.append(Turn(s.start, s.end, labels[s.speaker], " ".join(w.text for w in ws), "far", ws))
     group: list[Word] = []

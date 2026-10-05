@@ -8,8 +8,9 @@ Formato: ``{nome: {"centroid": [...], "n": int, "updated_at": ISO, "track": "far
 O centróide é a média dos embeddings L2-normalizados (renormalizada). Atribui um nome a um rótulo só quando
 o cosseno ≥ ``voices.threshold`` e a vantagem sobre o 2º candidato ≥ ``MARGIN``; um nome por rótulo.
 
-Base de tempo: ``auto_label`` recebe ``spans_by_track`` em tempo do ARQUIVO (saída direta do diarizador).
-``enroll`` lê ``turns.json`` (relógio do bundle) e desconta o deslocamento da faixa antes de embutir.
+Base de tempo: ``auto_label`` recebe ``spans_by_track`` no RELÓGIO DO BUNDLE (como ``pipeline.run`` passa, já
+com o offset somado) e ``enroll`` lê ``turns.json`` (também relógio do bundle); os dois descontam o
+deslocamento da faixa antes de chamar o embedder (que trabalha em tempo do arquivo).
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from .types import Span
 log = logging.getLogger("ata.voices")
 
 MARGIN = 0.05
+MIC_PREFIX = "mic:"     # = ata.pipeline.turns.MIC_PREFIX (rótulos do mic no mapa ``labels``)
 MIN_SPEECH_S = 1.0
 
 PRIVACY_WARNING = (
@@ -177,9 +179,10 @@ def auto_label(bundle_dir: Path | str, config: Config, spans_by_track: dict[str,
                labels: dict[str, Any]) -> dict[str, str]:
     """Rótulo final ("Pessoa 2") -> nome cadastrado, só para casamentos confiáveis. Desligado -> {}.
 
-    ``spans_by_track``: {"far": [Span(start, end, "S0"), ...], "mic": [...]} em tempo do arquivo.
-    ``labels``: rótulo do diarizador -> rótulo final, plano ({"S0": "Pessoa 2"}) ou por faixa
-    ({"far": {"S0": "Pessoa 2"}, "mic": {"S0": "Eu"}}). Rótulo sem mapeamento usa o próprio rótulo.
+    ``spans_by_track``: {"far": [Span(start, end, "S0"), ...], "mic": [...]} no relógio do bundle.
+    ``labels``: rótulo do diarizador -> rótulo final, plano ({"S0": "Pessoa 2", "mic:S0": "Eu"}; no mic
+    procura primeiro ``mic:<rótulo>``) ou por faixa ({"far": {"S0": "Pessoa 2"}, "mic": {"S0": "Eu"}}).
+    Rótulo sem mapeamento usa o próprio rótulo.
     Nunca levanta exceção: erro do motor -> {} (loga só o tipo)."""
     if not config.get("voices.enabled"):
         return {}
@@ -192,15 +195,19 @@ def auto_label(bundle_dir: Path | str, config: Config, spans_by_track: dict[str,
         meta = bundle.read_meta(bundle_dir)
         embedder = registry.build("speaker_embedder", str(config.get("diarization.engine")), config)
         model = str(getattr(embedder, "name", "?"))
+        offsets = bundle.track_offsets(meta)
         candidates: list[tuple[float, str, str]] = []   # (score, final_label, name)
         for track, spans in (spans_by_track or {}).items():
             tr = meta.tracks.get(track)
             if not spans or tr is None or not (Path(bundle_dir) / tr.file).is_file():
                 continue
             mapping = _flat_labels(labels, track)
-            vecs = embedder.embed(Path(bundle_dir) / tr.file, list(spans))
+            off = offsets.get(track, 0.0)
+            file_spans = [Span(max(0.0, s.start - off), max(0.0, s.end - off), s.speaker) for s in spans]
+            vecs = embedder.embed(Path(bundle_dir) / tr.file, file_spans)
             for diar_label, vec in vecs.items():
-                final = mapping.get(diar_label, diar_label)
+                final = mapping.get(f"{MIC_PREFIX}{diar_label}" if track == "mic" else diar_label) \
+                    or mapping.get(diar_label, diar_label)
                 scored = sorted(((cosine(vec, e["centroid"]), n) for n, e in data.items()
                                  if e.get("model", model) == model and e.get("centroid")), reverse=True)
                 if not scored:

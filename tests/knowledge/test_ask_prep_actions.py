@@ -4,9 +4,7 @@ from ata import bundle
 from ata.engines import registry
 from ata.knowledge import actions as A
 from ata.knowledge import ask as K
-from ata.knowledge import index as I
 from ata.knowledge import prep as P
-
 from knowledge.helpers import make_meeting
 
 
@@ -71,7 +69,9 @@ def test_ask_invalid_answer_falls_back(config, monkeypatch):
     assert res["answer"] is None and res["citations"]
 
 
-def test_ask_no_evidence(config):
+def test_ask_no_evidence(config, monkeypatch):
+    # o embedder fake (hash em 64 dimensões) tem colisões; sem vetores, só a busca lexical decide
+    monkeypatch.setattr(registry, "text_embedder_for", lambda c: (_ for _ in ()).throw(RuntimeError()))
     make_meeting(config)
     res = K.ask(config, "xilofone zebra")
     assert res == {"question": "xilofone zebra", "answer": None, "citations": [], "evidence": []}
