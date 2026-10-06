@@ -8,3 +8,5 @@
 - Bloco D CONCLUÍDO (103 testes). Pendências vistas: 2 falhas em tests/engines nemo (C) na suíte completa, 2 no MCP do E (KeyError ata.pipeline no conftest dele). E falta: demo, revisar mcp/dashboard/live.
 - Bloco E CONCLUÍDO. Suíte 450 passed. Critérios goal.md OK: help (25 comandos), demo pt/en/es fake → note:, dry-run crunchlog/2, search/ask com [reunião, mm:ss], MCP 19 tools, dashboard 200/403, limites OK, crunchlog intacto.
 - Próximo: guia trilíngue + READMEs EN/ES + repo público + portal.
+- CONCLUÍDO 05/10 ~21h30: suíte 456 passed; repo público inematds/ata; guia PT/EN/ES 200; portal d6d3ece + e0c8bed (EN/ES) + e0c2b2a (fix nome no feed); inemabuscas 16fa471; inemapro-mono b901193.
+- Pendente (fora do escopo pedido): medir motores reais (NeMo-Speech.cpp no GB10, onnx, Ollama), fixar sha256 no models.toml, compilar helper macOS, testar Windows.
