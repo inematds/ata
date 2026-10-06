@@ -13,7 +13,8 @@ from __future__ import annotations
 import argparse
 import functools
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .config import Config, load_config
 from .dashboard import api
@@ -73,8 +74,11 @@ class Tools:
     def decisions(self, **kw: Any) -> dict[str, Any]:
         return api.collect_items(self.config, "decisions", **kw)
 
-    def prep(self, title: str, days: int = 90) -> dict[str, Any]:
-        return api.prep(self.config, title, days=days)
+    def prep(self, title: str, days: int = 90, save: bool = False) -> dict[str, Any]:
+        return api.prep(self.config, title, days=days, save=save)
+
+    def action_done(self, item_id: str, done: bool = True) -> dict[str, Any]:
+        return api.set_done(self.config, item_id, done)
 
     def person(self, name: str, **kw: Any) -> dict[str, Any]:
         return api.person_timeline(self.config, name, **kw)
@@ -83,10 +87,10 @@ class Tools:
         return api.record_start(self.config, **kw)
 
     def record_stop(self, process: bool = True) -> dict[str, Any]:
-        return api.record_stop(self.config, process=process)
+        return api.record_stop(self.config, process=process, jobs=self.jobs)
 
     def record_toggle(self, title: str | None = None) -> dict[str, Any]:
-        return api.record_toggle(self.config, title=title)
+        return api.record_toggle(self.config, title=title, jobs=self.jobs)
 
     def process(self, meeting_id: str, **kw: Any) -> dict[str, Any]:
         return self.jobs.submit(self.config, meeting_id, **kw)
@@ -177,11 +181,12 @@ def build_server(config: Config, tools: Tools | None = None) -> Any:
     def ata_ask(question: str, meeting_id: str | None = None) -> dict[str, Any]:
         return T.ask(question, meeting_id)
 
-    @tool("ata_actions", "Ações (action items) entre reuniões, de summary.json: texto, owner (responsável), "
-                         "due (prazo), evidência. Filtros owner, since (AAAA-MM-DD), query. limit/cursor.")
-    def ata_actions(owner: str | None = None, since: str | None = None, query: str | None = None,
-                    limit: int = 50, cursor: str | None = None) -> dict[str, Any]:
-        return T.actions(owner=owner, since=since, query=query, limit=limit, cursor=cursor)
+    @tool("ata_actions", "Ações (action items) entre reuniões: id, texto, owner (responsável), due (prazo), "
+                         "ts [mm:ss]. Filtros owner, since (AAAA-MM-DD ou 7d/2w), status open|done|all, query. "
+                         "limit/cursor.")
+    def ata_actions(owner: str | None = None, since: str | None = None, status: str = "open",
+                    query: str | None = None, limit: int = 50, cursor: str | None = None) -> dict[str, Any]:
+        return T.actions(owner=owner, since=since, status=status, query=query, limit=limit, cursor=cursor)
 
     @tool("ata_decisions", "Decisões (decisions) entre reuniões, com evidência [mm:ss]. Filtros since, query. "
                            "limit/cursor.")
@@ -189,10 +194,16 @@ def build_server(config: Config, tools: Tools | None = None) -> Any:
                       cursor: str | None = None) -> dict[str, Any]:
         return T.decisions(since=since, query=query, limit=limit, cursor=cursor)
 
+    @tool("ata_action_done", "Marca uma ação/decisão como feita (mark action done) pelo id de ata_actions "
+                             "(aceita prefixo); done=false reabre.")
+    def ata_action_done(item_id: str, done: bool = True) -> dict[str, Any]:
+        return T.action_done(item_id, done)
+
     @tool("ata_prep", "Cola de preparação (meeting prep / cheatsheet) para uma próxima reunião: ações em "
-                      "aberto, decisões anteriores, perguntas e roteiro com itens (qN). days = janela.")
-    def ata_prep(title: str, days: int = 90) -> dict[str, Any]:
-        return T.prep(title, days)
+                      "aberto, decisões anteriores, perguntas e roteiro com itens (qN). days = janela; "
+                      "save=true grava a cola nas notas (usada pelo modo ao vivo).")
+    def ata_prep(title: str, days: int = 90, save: bool = False) -> dict[str, Any]:
+        return T.prep(title, days, save)
 
     @tool("ata_person", "Linha do tempo de uma pessoa (person timeline): reuniões em que falou, tempo de fala, "
                         "ações sob sua responsabilidade.")
@@ -204,7 +215,8 @@ def build_server(config: Config, tools: Tools | None = None) -> Any:
                          language: str | None = None) -> dict[str, Any]:
         return T.record_start(title=title, speakers=speakers, language=language)
 
-    @tool("ata_record_stop", "Para a gravação (stop recording); process=true processa e gera a nota.")
+    @tool("ata_record_stop", "Para a gravação (stop recording); process=true processa e gera a nota. Roda em "
+                             "segundo plano: devolve job_id (acompanhe com ata_job).")
     def ata_record_stop(process: bool = True) -> dict[str, Any]:
         return T.record_stop(process)
 

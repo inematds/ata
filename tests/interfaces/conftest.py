@@ -7,6 +7,7 @@ NOMES EXATOS de docs/INTERFACES.md, e cada chamada fica registrada em ``fakes.ca
 from __future__ import annotations
 
 import argparse
+import importlib
 import sys
 import types
 from dataclasses import dataclass
@@ -130,8 +131,8 @@ def fakes(monkeypatch, config, tmp_path):
 
     prep_mod = types.ModuleType("ata.knowledge.prep")
 
-    def build_prep(config, query, days=90):
-        f.calls.append(("build_prep", query, days))
+    def build_prep(config, query, days=90, calendar=None, *, dry_run=False):
+        f.calls.append(("build_prep", query, days, dry_run))
         return "# Preparação\n\n## Roteiro\n- (q1) Quando é o lançamento do beta\n- (q2) Quem corrige os tablets\n"
 
     prep_mod.build_prep = build_prep
@@ -140,7 +141,7 @@ def fakes(monkeypatch, config, tmp_path):
                       "ata.knowledge.ask": ask_mod, "ata.knowledge.prep": prep_mod}.items():
         monkeypatch.setitem(sys.modules, name, mod)
         parent, _, leaf = name.rpartition(".")
-        monkeypatch.setattr(sys.modules[parent], leaf, mod, raising=False)
+        monkeypatch.setattr(importlib.import_module(parent), leaf, mod, raising=False)
     monkeypatch.setattr(ata, "recorder", rec, raising=False)
     return f
 
@@ -161,5 +162,6 @@ def no_parts(monkeypatch):
                  "ata.knowledge.prep"):
         monkeypatch.setitem(sys.modules, name, None)
         parent, _, leaf = name.rpartition(".")
-        if hasattr(sys.modules[parent], leaf):
-            monkeypatch.delattr(sys.modules[parent], leaf)
+        pmod = importlib.import_module(parent)
+        if hasattr(pmod, leaf):
+            monkeypatch.delattr(pmod, leaf)

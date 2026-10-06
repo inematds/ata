@@ -1,0 +1,17 @@
+{
+  "name": "ata",
+  "description": "Ata: notas de reunião local-first (pt-BR, en, es). Servidor MCP com ferramentas ata_* e skills para notas, ações, preparação, perguntas e wiki.",
+  "version": "0.1.0",
+  "author": {
+    "name": "INEMA",
+    "email": "inematds@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "meeting-notes",
+    "transcription",
+    "mcp",
+    "local-first",
+    "pt-BR"
+  ]
+}

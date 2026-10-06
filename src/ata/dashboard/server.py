@@ -18,7 +18,6 @@ import sys
 import threading
 import time
 import webbrowser
-from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -65,6 +64,7 @@ class DashboardServer(ThreadingHTTPServer):
         self.token = token or load_token(config)
         self.stopping = threading.Event()
         self.sse_interval = sse_interval
+        self.jobs = api.Jobs()
         super().__init__(("127.0.0.1", port), Handler)
 
     @property
@@ -91,7 +91,7 @@ class Handler(BaseHTTPRequestHandler):
     sys_version = ""
 
     # sem log de requisição (a URL pode ter termos de busca)
-    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+    def log_message(self, format: str, *args: Any) -> None:
         return
 
     # ---- respostas ----------------------------------------------------------------------------------------
@@ -148,10 +148,10 @@ class Handler(BaseHTTPRequestHandler):
         return False
 
     # ---- roteamento ---------------------------------------------------------------------------------------
-    def do_HEAD(self) -> None:  # noqa: N802
+    def do_HEAD(self) -> None:
         self.do_GET()
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         if not self._host_ok():
             return self._err(403, "Host não permitido (use 127.0.0.1)")
         url = urlsplit(self.path)
@@ -181,7 +181,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _route_get(self, path: str, q: dict[str, list[str]]) -> None:
         cfg = self.server.config
-        one = lambda k, d=None: (q.get(k) or [d])[0]  # noqa: E731
+        one = lambda k, d=None: (q.get(k) or [d])[0]
         if path in STATIC_FILES:
             name, ctype = STATIC_FILES[path]
             return self._send(200, (STATIC_DIR / name).read_bytes(), ctype)
@@ -202,6 +202,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(api.doctor(cfg))
         if path == "/api/actions":
             return self._json(api.collect_items(cfg, "actions", owner=one("owner"), limit=one("limit")))
+        if path.startswith("/api/jobs/"):
+            return self._json(self.server.jobs.get(unquote(path[len("/api/jobs/"):])))
         if path == "/api/events":
             return self._sse(one("meeting"))
         m = _ROUTE_AUDIO.match(path)
@@ -213,7 +215,7 @@ class Handler(BaseHTTPRequestHandler):
                                                  parts=["meta", "summary", "transcript", "my_notes"]))
         self._err(404, "rota desconhecida")
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         if not self._host_ok() or not self._origin_ok():
             return self._err(403, "origem não permitida")
         if not self._authed():
@@ -238,7 +240,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(api.record_start(cfg, title=body.get("title") or None,
                                                    language=body.get("language") or None))
             if path == "/api/record/stop":
-                return self._json(api.record_stop(cfg, process=bool(body.get("process", True))))
+                return self._json(api.record_stop(cfg, process=bool(body.get("process", True)),
+                                                  jobs=self.server.jobs))
             m = _ROUTE_SPEAKERS.match(path)
             if m or path == "/api/speakers":
                 mid = unquote(m.group(1)) if m else str(body.get("meeting", ""))
@@ -310,7 +313,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _event(self, name: str, data: Any) -> None:
         payload = json.dumps(data, ensure_ascii=False, default=str)
-        self.wfile.write(f"event: {name}\ndata: {payload}\n\n".encode("utf-8"))
+        self.wfile.write(f"event: {name}\ndata: {payload}\n\n".encode())
 
 
 # ---- comando -----------------------------------------------------------------------------------------------

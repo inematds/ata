@@ -168,9 +168,9 @@ def list_meetings(config: Config, *, date_from: str | None = None, date_to: str 
 
 
 def _in_window(t: dict[str, Any], from_s: float | None, to_s: float | None) -> bool:
-    if from_s is not None and t["end"] < from_s:
+    if from_s is not None and t["end"] <= from_s:
         return False
-    if to_s is not None and t["start"] > to_s:
+    if to_s is not None and t["start"] >= to_s:
         return False
     return True
 
@@ -272,11 +272,11 @@ def search(config: Config, query: str, *, mode: str = "hybrid", limit: Any = Non
     engine = "index"
     try:
         from ..knowledge.index import search as _search  # parte D
-        hits = [_hit_plain(h) for h in _search(config, query, mode=mode, limit=n + off,
+        hits = [_hit_plain(h) for h in _search(config, query, mode=mode, limit=n + off + 1,
                                                 filters=filters or {})]
     except ImportError:
         engine = "lexical-fallback"
-        hits = _lexical_fallback(config, query, n + off)
+        hits = _lexical_fallback(config, query, n + off + 1)
     for h in hits:
         if h.get("start") is not None:
             h["t"] = _mmss(float(h["start"]))
@@ -299,17 +299,23 @@ def ask(config: Config, question: str, meeting: str | None = None) -> dict[str, 
     return to_plain(_ask(config, question, meeting=meeting))
 
 
-def prep(config: Config, query: str, days: int = 90) -> dict[str, Any]:
+def prep(config: Config, query: str, days: int = 90, *, save: bool = False) -> dict[str, Any]:
+    """Cola da parte D. ``save=False`` é prévia (``dry_run=True``); ``save=True`` grava em notes/."""
     if not query or not query.strip():
         raise ApiError("informe o título/assunto da reunião")
     try:
-        from ..knowledge.prep import build_prep  # parte D
+        from ..knowledge import prep as prep_mod  # parte D
     except ImportError:
         raise ApiError("módulo de preparação indisponível (ata.knowledge.prep)", 503) from None
-    text = build_prep(config, query, days=days)
-    items = [{"id": m.group(1), "text": m.group(2).strip()}
-             for m in re.finditer(r"\((q\d+)\)\s*(.+)$", text, re.M)]
-    return {"markdown": text, "items": items}
+    text = prep_mod.build_prep(config, query, days=days, dry_run=not save)
+    items = [{"q": m.group(2), "text": m.group(3).strip(), "done": m.group(1) == "x"}
+             for m in re.finditer(r"^\s*- (?:\[( |x)\] )?\((q\d+)\)\s*(.+)$", text, re.MULTILINE)]
+    out: dict[str, Any] = {"markdown": text, "items": items, "saved": None}
+    if save and hasattr(prep_mod, "prep_path"):
+        p = prep_mod.prep_path(config, query)
+        if p.is_file():
+            out["saved"] = str(p)
+    return out
 
 
 def reindex(config: Config) -> dict[str, Any]:
@@ -324,9 +330,24 @@ def reindex(config: Config) -> dict[str, Any]:
 # ---- ações / decisões entre reuniões (lidas de summary.json) ---------------------------------------------
 
 def collect_items(config: Config, kind: str, *, owner: str | None = None, since: str | None = None,
-                  query: str | None = None, limit: Any = None, cursor: Any = None) -> dict[str, Any]:
+                  query: str | None = None, status: str = "all", limit: Any = None,
+                  cursor: Any = None) -> dict[str, Any]:
     if kind not in ("actions", "decisions", "questions"):
         raise ApiError("kind inválido")
+    if status not in ("open", "done", "all"):
+        raise ApiError("status deve ser open, done ou all")
+    try:
+        from ..knowledge.actions import list_items  # parte D (estado feito/aberto em <cache>)
+    except ImportError:
+        list_items = None
+    if list_items is not None:
+        rows = list_items(config, kind=kind[:-1], owner=owner, since=since, status=status)
+        if query:
+            q = query.lower()
+            rows = [r for r in rows if q in str(r.get("text", "")).lower()]
+        page = paginate(rows, limit, cursor, default=50)
+        page["source"] = "ata.knowledge.actions"
+        return page
     rows = []
     for b in bundle.list_bundles(config.recordings):
         s = bundle.read_summary(b)
@@ -351,7 +372,8 @@ def collect_items(config: Config, kind: str, *, owner: str | None = None, since:
                 row["done"] = bool(item.get("done", False))
             ev = row["evidence"]
             if ev and isinstance(ev, list) and isinstance(ev[0], dict) and ev[0].get("t") is not None:
-                row["t"] = _mmss(float(ev[0]["t"]))
+                row["t"] = float(ev[0]["t"])
+                row["ts"] = _mmss(row["t"])
             rows.append(row)
     if owner:
         o = owner.lower()
@@ -359,7 +381,20 @@ def collect_items(config: Config, kind: str, *, owner: str | None = None, since:
     if query:
         q = query.lower()
         rows = [r for r in rows if q in str(r.get("text", "")).lower()]
-    return paginate(rows, limit, cursor, default=50)
+    page = paginate(rows, limit, cursor, default=50)
+    page["source"] = "summary.json"
+    return page
+
+
+def set_done(config: Config, item: str, done: bool = True) -> dict[str, Any]:
+    try:
+        from ..knowledge.actions import set_done as _set_done  # parte D
+    except ImportError:
+        raise ApiError("módulo de ações indisponível (ata.knowledge.actions)", 503) from None
+    full = _set_done(config, item, done)
+    if full is None:
+        raise ApiError(f"item não encontrado ou ambíguo: {item}", 404)
+    return {"ok": True, "id": full, "done": done}
 
 
 def person_timeline(config: Config, name: str, limit: Any = None, cursor: Any = None) -> dict[str, Any]:
@@ -446,9 +481,18 @@ def _cli(config: Config, *argv: str, timeout: float = 120.0) -> subprocess.Compl
 
 
 def rerender(config: Config, bdir: Path) -> dict[str, Any]:
-    """Re-renderiza a nota pelo CLI documentado (`ata rerender <alvo>`). Falha não é fatal."""
+    """Re-renderiza a nota (``ata.pipeline.run.rerender``; sem ele, `ata rerender`). Falha não é fatal."""
     if not (bdir / "turns.json").is_file():
         return {"ok": False, "error": "sem transcrição para re-renderizar"}
+    try:
+        from ..pipeline.run import rerender as _rerender  # parte B
+    except ImportError:
+        _rerender = None
+    if _rerender is not None:
+        try:
+            return {"ok": True, "note": str(_rerender(bdir, config))}
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "error": type(exc).__name__}
     try:
         r = _cli(config, "rerender", str(bdir))
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -499,25 +543,49 @@ def record_start(config: Config, *, title: str | None = None, speakers: int | No
     st = recorder_status(config)
     if st.get("phase") == "recording":
         return {"ok": False, "error": "já gravando", "status": st}
-    bdir = recorder.start(config, title=title, speakers=speakers, language=language)
+    try:
+        bdir = recorder.start(config, title=title, speakers=speakers, language=language)
+    except ValueError as exc:
+        raise ApiError(str(exc), 400) from None
+    except Exception as exc:  # AlreadyRecording / CaptureMissing / CaptureError (parte A)
+        name = type(exc).__name__
+        if name == "AlreadyRecording":
+            return {"ok": False, "error": "já gravando", "status": recorder_status(config)}
+        raise ApiError(f"não consegui gravar: {exc}", 503 if name == "CaptureMissing" else 500) from None
     return {"ok": True, "bundle": str(bdir), "id": Path(bdir).name}
 
 
-def record_stop(config: Config, *, process: bool = True) -> dict[str, Any]:
+def _stop_now(config: Config, process: bool) -> dict[str, Any]:
+    from .. import recorder
     try:
-        from .. import recorder
+        res = to_plain(recorder.stop(config, process=process))
+    except Exception as exc:
+        if type(exc).__name__ == "NothingRecording":
+            return {"ok": False, "error": str(exc)}
+        raise
+    return {"ok": True, **{k: (str(v) if isinstance(v, Path) else v) for k, v in dict(res).items()}}
+
+
+def record_stop(config: Config, *, process: bool = True, jobs: Jobs | None = None) -> dict[str, Any]:
+    """Para a gravação. ``recorder.stop`` bloqueia até processar: com ``jobs`` roda em segundo plano e
+    devolve ``job_id`` (acompanhe com ``jobs.get``)."""
+    try:
+        from .. import recorder  # noqa: F401
     except ImportError:
         raise ApiError("gravador indisponível (ata.recorder)", 503) from None
     st = recorder_status(config)
     if st.get("phase") != "recording":
         return {"ok": False, "error": "nada gravando", "status": st}
-    res = to_plain(recorder.stop(config, process=process))
-    return {"ok": True, **{k: (str(v) if isinstance(v, Path) else v) for k, v in dict(res).items()}}
+    if jobs is None:
+        return _stop_now(config, process)
+    name = Path(str(st.get("bundle") or "gravacao")).name
+    j = jobs.spawn(name, "stop", lambda: _stop_now(config, process))
+    return {"ok": True, "stopping": True, "job_id": j["job_id"], "bundle": st.get("bundle")}
 
 
-def record_toggle(config: Config, *, title: str | None = None) -> dict[str, Any]:
+def record_toggle(config: Config, *, title: str | None = None, jobs: Jobs | None = None) -> dict[str, Any]:
     if recorder_status(config).get("phase") == "recording":
-        return {"action": "stop", **record_stop(config)}
+        return {"action": "stop", **record_stop(config, jobs=jobs)}
     return {"action": "start", **record_start(config, title=title)}
 
 
@@ -593,35 +661,43 @@ class Jobs:
     def submit(self, config: Config, meeting_id: str, *, language: str | None = None,
                speakers: int | None = None, summarize: bool = True) -> dict[str, Any]:
         bdir = resolve_meeting(config, meeting_id)
+
+        def work() -> dict[str, Any]:
+            from ..pipeline.run import process_bundle  # parte B
+            note = process_bundle(bdir, config, language=language, speakers=speakers, summarize=summarize)
+            return {"note": str(note) if note else None}
+
+        return self.spawn(bdir.name, "process", work)
+
+    def spawn(self, meeting: str, kind: str, work: Any) -> dict[str, Any]:
+        """Roda ``work() -> dict`` numa thread; um trabalho ativo por (reunião, tipo)."""
         with self._lock:
             for j in self._jobs.values():
-                if j["meeting"] == bdir.name and j["status"] in ("queued", "running"):
+                if j["meeting"] == meeting and j["kind"] == kind and j["status"] in ("queued", "running"):
                     return {"job_id": j["job_id"], "status": j["status"], "busy": True}
             jid = uuid.uuid4().hex[:12]
-            job = {"job_id": jid, "meeting": bdir.name, "status": "queued", "progress": 0.0,
-                   "stage": "na fila", "note": None, "error": None,
-                   "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-                   "started": None, "seconds": None}
-            self._jobs[jid] = job
-        th = threading.Thread(target=self._run, args=(jid, config, bdir, language, speakers, summarize),
-                              name=f"ata-job-{jid}", daemon=True)
+            self._jobs[jid] = {"job_id": jid, "kind": kind, "meeting": meeting, "status": "queued",
+                               "progress": 0.0, "stage": "na fila", "note": None, "result": None,
+                               "error": None,
+                               "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                               "started": None, "seconds": None}
+        th = threading.Thread(target=self._run, args=(jid, work), name=f"ata-job-{jid}", daemon=True)
         th.start()
-        return {"job_id": jid, "status": "queued", "meeting": bdir.name}
+        return {"job_id": jid, "status": "queued", "meeting": meeting, "kind": kind}
 
     def _set(self, jid: str, **kw: Any) -> None:
         with self._lock:
             self._jobs[jid].update(kw)
 
-    def _run(self, jid: str, config: Config, bdir: Path, language: str | None, speakers: int | None,
-             summarize: bool) -> None:
+    def _run(self, jid: str, work: Any) -> None:
         t0 = time.monotonic()
         self._set(jid, status="running", progress=0.1, stage="processando", started=t0)
         try:
-            from ..pipeline.run import process_bundle  # parte B
-            note = process_bundle(bdir, config, language=language, speakers=speakers, summarize=summarize)
-            self._set(jid, status="done", progress=1.0, stage="pronto", note=str(note) if note else None)
-        except ImportError:
-            self._set(jid, status="error", stage="falhou", error="pipeline indisponível (ata.pipeline.run)")
+            res = work() or {}
+            self._set(jid, status="done", progress=1.0, stage="pronto", result=res, note=res.get("note"))
+        except ImportError as exc:
+            self._set(jid, status="error", stage="falhou",
+                      error=f"pipeline indisponível ({getattr(exc, 'name', None) or 'ata.pipeline.run'})")
         except Exception as exc:  # noqa: BLE001 - o erro vai para o job, sem texto de reunião
             self._set(jid, status="error", stage="falhou", error=f"{type(exc).__name__}: {exc}"[:300])
         finally:

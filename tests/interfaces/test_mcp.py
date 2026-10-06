@@ -2,15 +2,12 @@ import json
 import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import pytest
 
 from ata import bundle, mcp_server
 from ata.dashboard import api
-
-from .conftest import make_processed
 
 
 @pytest.fixture
@@ -119,8 +116,9 @@ def test_build_server_registers_all(config):
 
 
 def test_list_pagination(tools, config):
-    from ata.testing import Line, synth_meeting
     from datetime import datetime, timedelta
+
+    from ata.testing import Line, synth_meeting
     base = datetime(2026, 10, 1, 9, 0).astimezone()
     for i in range(5):
         synth_meeting(config.recordings, [Line("Eu", "oi"), Line("A", "olá")], title=f"r{i}",
@@ -156,7 +154,7 @@ def test_search_uses_index(tools, fakes):
     r = tools.search("lançamento", limit=3)
     assert r["engine"] == "index" and len(r["items"]) == 3 and r["next_cursor"] == "3"
     assert r["items"][0]["t"] == "00:12"
-    assert ("index.search", "lançamento", "hybrid", 3) in fakes.calls
+    assert ("index.search", "lançamento", "hybrid", 4) in fakes.calls  # +1 detecta próxima página
     r2 = tools.search("lançamento", limit=3, cursor="3")
     assert r2["items"][0]["text"].startswith("trecho 3")
 
@@ -175,7 +173,7 @@ def test_actions_and_decisions(tools, processed):
     assert tools.actions(owner="bruno")["total"] == 1
     assert tools.actions(owner="ninguem")["total"] == 0
     d = tools.decisions()
-    assert d["items"][0]["t"] == "00:13"
+    assert d["items"][0]["ts"] == "00:13"
 
 
 def test_person_timeline(tools, processed):
@@ -191,8 +189,8 @@ def test_ask_and_prep(tools, fakes, processed):
     assert r["answer"] == "dia doze"
     assert ("ask", "quando lança?", processed.name) in fakes.calls
     p = tools.prep("beta", days=30)
-    assert [i["id"] for i in p["items"]] == ["q1", "q2"]
-    assert ("build_prep", "beta", 30) in fakes.calls
+    assert [i["q"] for i in p["items"]] == ["q1", "q2"]
+    assert ("build_prep", "beta", 30, True) in fakes.calls  # prévia = dry_run
 
 
 def test_record_lane(tools, fakes):
@@ -201,7 +199,9 @@ def test_record_lane(tools, fakes):
     assert r["ok"] and fakes.calls[0] == ("recorder.start", "planejamento", None, None)
     assert tools.record_start()["ok"] is False  # já gravando
     t = tools.record_toggle()
-    assert t["action"] == "stop" and ("recorder.stop", True) in fakes.calls
+    assert t["action"] == "stop" and t["job_id"]  # stop bloqueia: roda em segundo plano
+    assert tools.jobs.wait(t["job_id"], 10)["status"] == "done"
+    assert ("recorder.stop", True) in fakes.calls
     assert tools.record_stop()["ok"] is False  # nada gravando
 
 
