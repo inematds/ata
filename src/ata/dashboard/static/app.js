@@ -294,7 +294,10 @@ $("#rec-stop").addEventListener("click", async () => {
   try { await post("/api/record/stop", { process: true }); } catch (e) { $("#status-text").textContent = e.message; }
   refreshStatus(); loadLatest();
 });
-$("#lang").addEventListener("change", () => { state.lang = $("#lang").value; pref("lang", state.lang); applyI18n(); });
+$("#lang").addEventListener("change", () => {
+  state.lang = $("#lang").value; pref("lang", state.lang); applyI18n();
+  loadLatest(); if (document.querySelector('[data-view="meetings"].active')) loadMeetings(true);
+});
 $("#theme").addEventListener("click", () => {
   const order = ["auto", "dark", "light"], cur = document.documentElement.dataset.theme || "auto";
   const next = order[(order.indexOf(cur) + 1) % order.length];

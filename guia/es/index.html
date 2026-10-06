@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ata — notas de reunión local-first en español, portugués e inglés</title>
+<meta name="description" content="Ata: graba reuniones en dos pistas, transcribe en tu máquina (GPU o CPU) en español, portugués o inglés y recibe el acta con cada intervención por persona, resumen, búsqueda, MCP y modo en vivo. Código abierto de INEMA.">
+<link rel="alternate" hreflang="pt-BR" href="https://inematds.github.io/ata/guia/">
+<link rel="alternate" hreflang="en" href="https://inematds.github.io/ata/guia/en/">
+<link rel="alternate" hreflang="es" href="https://inematds.github.io/ata/guia/es/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0c10; --bg2:#14141b; --card:#16161e; --line:#272730;
+    --txt:#e9e9ee; --mut:#9a9aa6; --amb:#E2A23B; --amb2:#f0c070; --sky:#38bdf8; --pro:#cbd5e1;
+    color-scheme:dark;
+  }
+  body.light{
+    --bg:#f6f7f9; --bg2:#eceef2; --card:#ffffff; --line:#e1e3ea;
+    --txt:#1a1a22; --mut:#5b5b68; --amb:#b9791d; --amb2:#a16207; --sky:#0369a1; --pro:#b45309;
+    color-scheme:light;
+  }
+  body.light .hero .glow{opacity:.5}
+  body.light pre{background:#0e0e14;color:#d6d6e0}
+  body.light pre .c{color:#8a8a98}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.65 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:Sora,sans-serif;line-height:1.15;margin:0}
+  a{color:var(--amb);text-decoration:none}
+  code,pre{font-family:"JetBrains Mono",monospace}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 22px}
+  .mut{color:var(--mut)} .amb{color:var(--amb)}
+  .chip{display:inline-block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--amb);font-weight:600;font-family:Sora}
+  nav{position:sticky;top:0;z-index:30;backdrop-filter:blur(12px);background:rgba(12,12,16,.78);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;gap:22px;height:60px}
+  nav .brand{display:flex;align-items:center;gap:8px;font-family:Sora;font-weight:800;letter-spacing:-.02em;color:var(--amb)}
+  nav .brand .emoji{font-size:1.25rem}
+  nav .sep{color:var(--mut);opacity:.45}
+  nav .inema{color:var(--sky);font-weight:600;font-size:.88rem;font-family:Sora}
+  nav .inema:hover{filter:brightness(1.15)}
+  nav .pro{color:var(--pro);font-weight:600;font-size:.88rem;font-family:Sora}
+  nav .pro:hover{filter:brightness(1.15)}
+  nav .clubpro{display:inline-flex;align-items:center;gap:6px}
+  nav .links{margin-left:auto;display:flex;align-items:center;gap:20px;font-size:.92rem}
+  nav .links a.sec{color:var(--mut)} nav .links a.sec:hover{color:var(--txt)}
+  .lang{display:inline-flex;gap:2px;font-family:Sora;font-size:.78rem}
+  .lang a{color:var(--mut);padding:.2em .45em;border-radius:6px} .lang a.on{color:var(--amb);background:rgba(226,162,59,.12)}
+  .tgl{background:var(--bg2);border:1px solid var(--line);color:var(--txt);width:38px;height:38px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem}
+  .tgl:hover{border-color:var(--amb)}
+  .btn{display:inline-block;background:var(--amb);color:#1a1206;font-weight:600;padding:.6em 1.05em;border-radius:10px;font-family:Sora}
+  .btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+  @media(max-width:760px){nav .links a.sec{display:none}}
+  @media(max-width:520px){nav .wrap{gap:8px;padding:8px 14px;height:auto;flex-wrap:wrap} nav .links{gap:8px;margin-left:0;width:100%;justify-content:space-between} nav .btn{padding:.45em .7em;font-size:.82rem} .tgl{width:34px;height:34px}}
+  .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+  .hero .glow{position:absolute;inset:-40% -20% auto auto;width:70%;height:600px;background:radial-gradient(closest-side,rgba(226,162,59,.22),transparent 70%);pointer-events:none}
+  .hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:74px 22px}
+  .hero h1{font-size:clamp(2.2rem,5vw,3.5rem);font-weight:800;letter-spacing:-.025em}
+  .hero p.lead{font-size:1.18rem;color:var(--mut);margin:1.1em 0 1.6em;max-width:34ch}
+  .hero .cta{display:flex;gap:12px;flex-wrap:wrap}
+  .hero figure{margin:0;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 80px -30px #000}
+  .hero figure img{width:100%;display:block}
+  @media(max-width:780px){.hero .wrap{grid-template-columns:1fr;padding:48px 22px}}
+  section{padding:62px 0;border-bottom:1px solid var(--line)}
+  section h2{font-size:clamp(1.5rem,3.4vw,2.1rem);font-weight:800;letter-spacing:-.02em}
+  section .sub{color:var(--mut);margin:.6em 0 2em;max-width:62ch}
+  .grid{display:grid;gap:16px}
+  .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:820px){.g3,.g4{grid-template-columns:1fr 1fr}}
+  @media(max-width:540px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .card h3{font-size:1.05rem;margin-bottom:.4em}
+  .card p{color:var(--mut);font-size:.92rem;margin:0}
+  .num{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:8px;background:rgba(226,162,59,.14);color:var(--amb);font-family:Sora;font-weight:800;font-size:.9rem;margin-bottom:.7em}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .flow span{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:.45em .9em;font-size:.85rem;font-family:Sora;font-weight:600}
+  .flow .arr{color:var(--amb);border:none;background:none;padding:0 .1em}
+  pre{background:#0a0a0e;border:1px solid var(--line);border-radius:12px;padding:16px 18px;overflow:auto;font-size:.86rem;line-height:1.6;color:#d6d6e0}
+  pre .c{color:#6f6f7c} pre .k{color:var(--amb2)} pre .s{color:#9ece6a}
+  .step{display:grid;grid-template-columns:46px minmax(0,1fr);gap:16px;margin-bottom:26px}
+  .step>div,.card{min-width:0}
+  p code,li code,td code{overflow-wrap:anywhere}
+  .step .b{width:46px;height:46px;border-radius:12px;background:var(--amb);color:#1a1206;font-family:Sora;font-weight:800;font-size:1.25rem;display:flex;align-items:center;justify-content:center}
+  .step h3{font-size:1.12rem;margin-bottom:.3em}
+  .step p{color:var(--mut);margin:.2em 0 .7em}
+  .ex{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.ex{grid-template-columns:1fr}}
+  .ex figure{margin:0;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+  .ex figure img{width:100%;display:block}
+  .ex figcaption{padding:12px 14px;font-size:.88rem;color:var(--mut);background:var(--card)}
+  .phase{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--line)}
+  .phase:last-child{border:none}
+  .phase .tag{flex:0 0 92px;font-family:Sora;font-weight:800;color:var(--amb)}
+  .phase .d strong{display:block;margin-bottom:.2em}
+  .phase .d span{color:var(--mut);font-size:.92rem}
+  footer{padding:46px 0;text-align:center;color:var(--mut);font-size:.9rem}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:.3em .8em;font-size:.78rem;color:var(--mut);margin:0 4px}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="#top"><span class="emoji">📝</span> Ata</a>
+  <span class="sep">|</span>
+  <span class="clubpro">
+    <a class="inema" href="https://inema.club" target="_blank" rel="noopener">INEMA.CLUB</a>
+    <span class="sep">-</span>
+    <a class="pro" href="https://inema.pro" target="_blank" rel="noopener">PRO</a>
+  </span>
+  <div class="links">
+    <a class="sec" href="#oque">Qué es</a>
+    <a class="sec" href="#fluxo">Cómo funciona</a>
+    <a class="sec" href="#guia">Guía de uso</a>
+    <a class="sec" href="#agentes">Agentes</a>
+    <a class="sec" href="#exemplos">Pantallas</a>
+    <a class="sec" href="#roadmap">Estado</a>
+    <span class="lang"><a href="../">PT</a><a href="../en/">EN</a><a class="on" href="./">ES</a></span>
+    <button class="tgl" id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
+    <a class="btn" href="https://github.com/inematds/ata" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</div></nav>
+
+<header class="hero" id="top">
+  <div class="glow"></div>
+  <div class="wrap">
+    <div>
+      <span class="chip">Notas de reunión local-first · pt-BR, EN y ES · código abierto</span>
+      <h1>Tu reunión se vuelve <span class="amb">acta</span>, sin salir de tu máquina</h1>
+      <p class="lead">Ata graba la llamada en dos pistas (lo que escuchas y lo que dices), transcribe en tu máquina con GPU o CPU y entrega la nota con cada intervención por persona, resumen, decisiones y acciones. Sin bot en la llamada, sin cuenta, sin API de pago.</p>
+      <div class="cta">
+        <a class="btn" href="#guia">Empezar la guía</a>
+        <a class="btn ghost" href="https://github.com/inematds/ata" target="_blank" rel="noopener">Ver en GitHub</a>
+      </div>
+    </div>
+    <figure><img src="../assets/banner-es.jpg" alt="Ata: tu reunión se vuelve acta"></figure>
+  </div>
+</header>
+
+<section id="oque"><div class="wrap">
+  <span class="chip">Qué es</span>
+  <h2>Un notetaker de reuniones que habla español y respeta tu privacidad</h2>
+  <p class="sub">Proyecto abierto de INEMA (MIT), inspirado en las ideas de CrunchLog, de Christian Landsteiner. Es una implementación independiente: no se usó ninguna línea de código suyo. La diferencia está en el portugués, el inglés y el español como idiomas de primera clase, Linux como plataforma principal, uso de la GPU, resumen local y modo en vivo sin servicio de pago.</p>
+  <figure style="margin:0 0 26px;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:0 30px 80px -30px #000"><img src="../assets/banner-grade-es.jpg" alt="Funciones de Ata: dos pistas, español, portugués e inglés, GPU o CPU, resumen local, búsqueda y MCP, modo en vivo" loading="lazy" style="width:100%;display:block"></figure>
+  <div class="grid g3">
+    <div class="card"><h3>🎧 Dos pistas, "el micrófono eres tú"</h3><p>La salida de sonido (Meet, Zoom, Teams) y el micrófono se graban por separado. Todo lo que viene del micrófono es "Yo"; el gate quita el eco del parlante y la separación de hablantes solo actúa del otro lado.</p></div>
+    <div class="card"><h3>🇧🇷 Portugués, inglés y español</h3><p>El motor, la limpieza de muletillas ("né", "tipo"; "um", "uh"; "este", "o sea"), la nota, el resumen, el demo y la preparación cambian con el idioma de la reunión. Etiquetas: Eu / Pessoa 2, Me / Speaker 2, Yo / Persona 2.</p></div>
+    <div class="card"><h3>🔒 Local por defecto</h3><p>La transcripción (NeMo-Speech.cpp en la GPU u onnx en la CPU), el resumen (Ollama), la búsqueda y el modo en vivo corren en tu máquina. Claude o Codex por suscripción son opcionales y solo reciben texto, nunca audio.</p></div>
+  </div>
+</div></section>
+
+<section id="fluxo"><div class="wrap">
+  <span class="chip">Cómo funciona</span>
+  <h2>De la tecla al acta, en un solo camino</h2>
+  <p class="sub">Cada reunión se vuelve una carpeta (el bundle <code>ata/1</code>) con far.wav, mic.wav y meta.json. Todo lo que viene después (palabras, intervenciones, resumen, nota, índice) es derivado y se puede rehacer.</p>
+  <div class="flow">
+    <span>ata toggle</span><span class="arr">→</span>
+    <span>far.wav + mic.wav</span><span class="arr">→</span>
+    <span>transcripción por pista e idioma</span><span class="arr">→</span>
+    <span>el gate quita el eco</span><span class="arr">→</span>
+    <span>quién habló (+ voces conocidas)</span><span class="arr">→</span>
+    <span>intervenciones + limpieza</span><span class="arr">→</span>
+    <span>resumen JSON</span><span class="arr">→</span>
+    <span>nota + búsqueda + segundo cerebro</span>
+  </div>
+  <div class="grid g3" style="margin-top:22px">
+    <div class="card"><h3>Grabación en los 3 sistemas</h3><p>Linux: PipeWire (<code>pw-record</code>, con alineación de las pistas por el eco). Windows: WASAPI loopback. macOS 14.2+: helper Swift con process tap (código fuente incluido).</p></div>
+    <div class="card"><h3>Motores intercambiables</h3><p>Principal: NeMo-Speech.cpp (Parakeet v3, Nemotron 3.5 streaming y Nemotron 3 Diarization; CUDA en el DGX Spark/GB10, Metal en Mac). Respaldo: onnx-asr + sherpa-onnx en la CPU. Si el principal falla, pasa al respaldo y lo registra en la nota.</p></div>
+    <div class="card"><h3>Lee CrunchLog</h3><p>Las grabaciones de CrunchLog (<code>bundle_version: 2</code>) se leen y procesan como copia, sin tocar el original. Sirve para migrar y para comparar resultados.</p></div>
+  </div>
+</div></section>
+
+<section id="pre"><div class="wrap">
+  <span class="chip">Requisitos previos</span>
+  <h2>Lo que necesitas</h2>
+  <p class="sub">Python 3.12 viene con uv. Para el resumen local, Ollama; para la grabación en Linux, PipeWire.</p>
+  <div class="grid g3">
+    <div class="card"><h3>uv</h3><p>Gestor de Python de Astral.</p><pre><span class="c"># Linux / macOS</span>
+<span class="k">curl</span> -LsSf <span class="s">https://astral.sh/uv/install.sh</span> | sh
+<span class="c"># Windows (PowerShell)</span>
+<span class="k">powershell</span> -c <span class="s">"irm https://astral.sh/uv/install.ps1 | iex"</span></pre></div>
+    <div class="card"><h3>Ollama (resumen local)</h3><p>El valor por defecto es <code>qwen3.6:35b-a3b</code>; se puede cambiar en el <code>config.toml</code>.</p><pre><span class="k">ollama</span> pull qwen3.6:35b-a3b
+<span class="k">ollama</span> pull qwen3-embedding:0.6b</pre></div>
+    <div class="card"><h3>Opcionales</h3><p>ffmpeg (importar mp3/mp4), Piper (voz del demo), Claude Code o Codex con sesión iniciada (resumen por suscripción).</p><pre><span class="k">which</span> pw-record ffmpeg piper claude codex</pre></div>
+  </div>
+</div></section>
+
+<section id="guia"><div class="wrap">
+  <span class="chip">Guía de uso · paso a paso</span>
+  <h2>De la instalación a la primera acta</h2>
+  <p class="sub">Comandos reales de Ata 0.1.0.</p>
+
+  <div class="step"><div class="b">1</div><div>
+    <h3>Instala</h3>
+    <p>Los extras traen el MCP, el modo en vivo y el motor de CPU. Usa <code>".[all]"</code> para todo, incluida la captura en Windows.</p>
+<pre><span class="k">git clone</span> <span class="s">https://github.com/inematds/ata</span> && <span class="k">cd</span> ata
+<span class="k">uv tool install</span> --python 3.12 <span class="s">".[mcp,live,onnx]"</span>
+<span class="k">ata</span> --version          <span class="c"># ata 0.1.0</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">2</div><div>
+    <h3>Configura</h3>
+    <p>Idioma por defecto, carpetas y quién hace el resumen. Elegir <code>claude</code> o <code>codex</code> activa el nivel de privacidad 1 y avisa que el texto sale de la máquina.</p>
+<pre><span class="k">ata setup</span> --lang pt-BR --summary ollama
+<span class="c"># carpetas por defecto: ~/Ata/gravacoes y ~/Ata/notas · config: ~/.config/ata/config.toml</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">3</div><div>
+    <h3>Instala y enciende el motor de transcripción</h3>
+    <p>El <code>install</code> detecta el hardware: cuda13 en el GB10, metal en Mac, cpu en los demás. El motor corre solo en 127.0.0.1 y, en Linux, con tope de memoria.</p>
+<pre><span class="k">ata engine install</span> --dry-run              <span class="c"># muestra lo que va a descargar</span>
+<span class="k">ata engine install</span> --allow-unverified     <span class="c"># 0.1.0: hashes aún no fijados</span>
+<span class="k">ata engine start</span>
+<span class="k">ata engine status</span>
+<span class="k">ata doctor</span>                                <span class="c"># [ok]/[warn]/[fail] por ítem; exit 0 = listo</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">4</div><div>
+    <h3>Primera acta: el demo</h3>
+    <p>Una reunión inventada, con guion propio en cada idioma (3 personas, números, una decisión, dos acciones y una pregunta abierta), pasa por el pipeline real. Con Piper, las voces se sintetizan; con <code>--no-tts</code>, el audio es sintético y sirve para probar sin modelo.</p>
+<pre><span class="k">ata demo</span> --lang pt-BR
+<span class="k">ata demo</span> --lang en --no-tts
+<span class="c"># note: ~/Ata/notas/2026-10-05-2111-revisao-do-mare-app-de-hortas.md</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">5</div><div>
+    <h3>Graba una reunión de verdad</h3>
+    <p>Asigna <code>ata toggle</code> a una tecla (GNOME/KDE, PowerToys/AutoHotkey, Atajos de macOS, Stream Deck). En Linux, con otras tarjetas de sonido: <code>ATA_FAR_TARGET</code> y <code>ATA_MIC_TARGET</code> con el <code>node.name</code> de <code>wpctl status</code>.</p>
+<pre><span class="k">ata toggle</span>                                         <span class="c"># empieza</span>
+<span class="k">ata toggle</span>                                         <span class="c"># se detiene y escribe el acta</span>
+<span class="k">ata start</span> --title <span class="s">"Kickoff Acme"</span> --speakers 3 --lang pt-BR
+<span class="k">ata status</span> --json</pre>
+  </div></div>
+
+  <div class="step"><div class="b">6</div><div>
+    <h3>Importa lo que ya tienes</h3>
+    <p>Audio o video de cualquier formato (pasa por ffmpeg) se vuelve una reunión solo con la pista "far". Las grabaciones de CrunchLog también entran.</p>
+<pre><span class="k">ata import</span> entrevista.mp4 --lang es --title <span class="s">"Entrevista Lucía"</span>
+<span class="k">ata process</span> --dry-run ~/CrunchLog/recordings/2026-10-05-1642-demo
+<span class="c"># bundle crunchlog/2 lido: 2 tracks, offsets={"far": 0.0, "mic": 0.0}</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">7</div><div>
+    <h3>Ajusta el acta</h3>
+    <p>Pon nombres, reprocesa con el número correcto de personas, exporta subtítulos. Tus anotaciones van en el <code>my-notes.md</code> de la carpeta de la reunión y entran en el resumen.</p>
+<pre><span class="k">ata speakers</span> latest <span class="s">"Persona 2=Ana"</span> <span class="s">"Persona 3=Bruno"</span>
+<span class="k">ata process</span> latest --speakers 4
+<span class="k">ata rerender</span> latest
+<span class="k">ata export</span> latest --format srt          <span class="c"># srt|vtt|txt|json|md|csv</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">8</div><div>
+    <h3>Busca y pregunta en todas las reuniones</h3>
+    <p>El índice SQLite junta búsqueda por palabra (FTS5) y por significado (vectores de Ollama). Cada fragmento viene con <code>[reunión, mm:ss]</code>.</p>
+<pre><span class="k">ata search</span> <span class="s">"fecha de lanzamiento"</span> --since 30d
+<span class="k">ata ask</span> <span class="s">"¿qué decidimos sobre el lanzamiento?"</span>
+<span class="c"># [Revisão do Maré app de hortas, 01:00] Eu: ...ficou definido que lançamos a versão dois no dia 14 de novembro</span>
+<span class="k">ata actions</span> --owner Ana              <span class="c"># acciones abiertas entre reuniones</span>
+<span class="k">ata actions</span> --done &lt;id&gt;               <span class="c"># la marca como hecha (id del --json)</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">9</div><div>
+    <h3>Prepara la próxima reunión</h3>
+    <p>La agenda junta acciones abiertas, decisiones y preguntas de las reuniones con ese cliente. Los ítems <code>(qN)</code> se marcan solos cuando la reunión siguiente los responde, incluso en vivo.</p>
+<pre><span class="k">ata prep</span> <span class="s">"acme"</span> --calendar <span class="s">"Jue 14h, Ana y Bruno"</span>
+<span class="c"># ~/Ata/notas/2026-10-06-acme-preparacao.md</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">10</div><div>
+    <h3>Modo en vivo</h3>
+    <p>Durante la grabación, transcribe las dos pistas en tiempo real con Nemotron 3.5 streaming local, guarda las intervenciones en <code>live/turns.jsonl</code> y marca la agenda. Nada de servicio de pago.</p>
+<pre><span class="k">ata start</span> --title <span class="s">"Acme semanal"</span>
+<span class="k">ata live start</span>
+<span class="k">ata live tail</span>                           <span class="c"># muestra las intervenciones a medida que llegan</span></pre>
+  </div></div>
+
+  <div class="step"><div class="b">11</div><div>
+    <h3>Reconoce voces (opcional)</h3>
+    <p>Desactivado por defecto, porque la voz es un dato biométrico. Con <code>[voices] enabled = true</code>, registra una voz y "Persona 2" pasa a ser "Ana" en las próximas reuniones. Queda solo en tu máquina y se puede borrar.</p>
+<pre><span class="k">ata voices enroll</span> Ana latest <span class="s">"Persona 2"</span>
+<span class="k">ata voices list</span>
+<span class="k">ata voices forget</span> --all</pre>
+  </div></div>
+
+  <div class="step"><div class="b">12</div><div>
+    <h3>Dashboard</h3>
+    <p>Grabar y detener, escuchar las pistas, transcripción clicable, renombrar hablantes, búsqueda y modo en vivo, en PT, EN o ES. Solo escucha en 127.0.0.1; la primera visita usa el enlace con el token.</p>
+<pre><span class="k">ata dashboard</span>              <span class="c"># http://127.0.0.1:47530/</span></pre>
+  </div></div>
+</div></section>
+
+<section id="agentes"><div class="wrap">
+  <span class="chip">Agentes y segundo cerebro</span>
+  <h2>Tus reuniones se vuelven memoria de tus agentes</h2>
+  <p class="sub">Ata fue pensado para agentes: el servidor MCP, las skills y el Markdown son interfaces de primera clase.</p>
+  <div class="grid g3">
+    <div class="card"><h3>🔌 MCP (19 herramientas)</h3><p><code>ata_status, ata_list, ata_read, ata_search, ata_ask, ata_actions, ata_decisions, ata_prep, ata_person, ata_record_start/stop/toggle, ata_process, ata_job, ata_rename_speakers, ata_export, ata_reindex, ata_doctor, ata_action_done</code>.</p><pre><span class="k">claude mcp add</span> --scope user ata -- ata mcp</pre></div>
+    <div class="card"><h3>🧠 Segundo cerebro</h3><p>Cada reunión se vuelve <code>fontes/AAAA-MM-DD-slug.md</code> (tipo fuente, subtipo reunión) y las decisiones entran en <code>decisoes/registro.md</code>. Los archivos que editaste nunca se sobrescriben.</p><pre><span class="k">ata connect</span> cerebro --dir ~/meu-cerebro
+<span class="k">ata connect</span> obsidian --vault ~/Obsidian</pre></div>
+    <div class="card"><h3>🧩 Skills y plugin</h3><p>Cinco skills para Claude Code y Codex: <code>meeting-notes</code>, <code>action-items</code>, <code>meeting-prep</code>, <code>ask-meetings</code>, <code>meeting-to-wiki</code>. El plugin está en <code>.claude-plugin/</code>. Agentic OS de Jack Roberts también está soportado (opcional).</p><pre><span class="k">ata connect</span> agentic-os --dry-run</pre></div>
+  </div>
+</div></section>
+
+<section id="exemplos"><div class="wrap">
+  <span class="chip">Pantallas reales</span>
+  <h2>El dashboard con las reuniones del demo</h2>
+  <p class="sub">Capturas de la versión 0.1.0 con las tres reuniones de demostración (pt-BR, en, es).</p>
+  <div class="ex">
+    <figure><img src="../assets/dash-home.jpg" alt="Vista general con grabar y detener y las últimas reuniones" loading="lazy"><figcaption>Vista general: grabar y detener, estado del grabador y últimas reuniones.</figcaption></figure>
+    <figure><img src="../assets/dash-meeting.jpg" alt="Reunión abierta con resumen, decisiones, acciones y transcripción" loading="lazy"><figcaption>Reunión: resumen, temas, decisiones, acciones con responsable, preguntas, hablantes renombrables y transcripción clicable.</figcaption></figure>
+    <figure><img src="../assets/dash-meetings.jpg" alt="Lista de reuniones con filtro" loading="lazy"><figcaption>Reuniones: lista con filtro por título, duración y número de intervenciones.</figcaption></figure>
+    <figure><img src="../assets/dash-search.jpg" alt="Búsqueda en todas las reuniones" loading="lazy"><figcaption>Búsqueda: lo que se dijo sobre un tema, en todas las reuniones, con el momento exacto.</figcaption></figure>
+    <figure><img src="../assets/dash-live.jpg" alt="Página del modo en vivo" loading="lazy"><figcaption>En vivo: las intervenciones llegando durante la reunión.</figcaption></figure>
+    <figure><img src="../assets/dash-settings.jpg" alt="Configuración" loading="lazy"><figcaption>Configuración: idioma, motores, resumen y privacidad.</figcaption></figure>
+  </div>
+</div></section>
+
+<section id="roadmap"><div class="wrap">
+  <span class="chip">Estado y privacidad</span>
+  <h2>Lo que está listo y lo que falta medir</h2>
+  <p class="sub">Transparencia sobre la versión 0.1.0.</p>
+  <div class="phase"><div class="tag">Listo</div><div class="d"><strong>Todas las fases implementadas</strong><span>Grabación en los 3 sistemas, pipeline, nota trilingüe, resumen, búsqueda, preguntas, agenda, acciones, voces, conexiones, MCP, dashboard, modo en vivo, demo, doctor y bench. Más de 450 pruebas automáticas, sin red y sin modelos.</span></div></div>
+  <div class="phase"><div class="tag">Probado</div><div class="d"><strong>Grabación real en Linux</strong><span>Captura por PipeWire probada de verdad en un DGX Spark (GB10, ARM64).</span></div></div>
+  <div class="phase"><div class="tag">Por medir</div><div class="d"><strong>Motores reales</strong><span>NeMo-Speech.cpp, onnx y Ollama están implementados pero aún no se midieron en esta versión. El formato de la API de NeMo-Speech.cpp sigue lo documentado en src/ata/engines/nemo.py, y los hashes de las descargas aún no están fijados (por eso el --allow-unverified).</span></div></div>
+  <div class="phase"><div class="tag">Por probar</div><div class="d"><strong>Windows y macOS</strong><span>La captura en Windows está implementada; el helper de macOS viene como código fuente Swift, aún sin compilar.</span></div></div>
+  <div class="phase"><div class="tag">Nivel 0</div><div class="d"><strong>Privacidad por defecto: nada sale de la máquina</strong><span>La transcripción, el resumen con Ollama, la búsqueda y el modo en vivo son todos locales. El nivel 1 (Claude o Codex por suscripción) envía solo texto, con las herramientas desactivadas. Los logs nunca contienen texto de reuniones. ata privacy &lt;reunión&gt; muestra quién tocó cada grabación.</span></div></div>
+</div></section>
+
+<footer>
+  <div class="wrap">
+    <div class="pill">Python 3.12 · uv</div><div class="pill">NeMo-Speech.cpp · Parakeet · Nemotron</div><div class="pill">onnx-asr · sherpa-onnx</div><div class="pill">Ollama</div><div class="pill">SQLite FTS5</div><div class="pill">MCP</div>
+    <p style="margin-top:18px">Ata · MIT · inspirado en las ideas de CrunchLog (Christian Landsteiner) · implementación independiente de INEMA ·
+      <a href="https://github.com/inematds/ata">inematds/ata</a> ·
+      <a href="https://inema.club">INEMA.CLUB</a></p>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var KEY='ata-theme';
+    var b=document.body, t=document.getElementById('themeToggle');
+    if(localStorage.getItem(KEY)==='light'){ b.classList.add('light'); t.textContent='☀️'; }
+    t.addEventListener('click',function(){
+      var light=b.classList.toggle('light');
+      t.textContent=light?'☀️':'🌙';
+      localStorage.setItem(KEY, light?'light':'dark');
+    });
+  })();
+</script>
+</body>
+</html>

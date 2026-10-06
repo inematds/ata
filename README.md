@@ -1,5 +1,7 @@
 # Ata — notas de reunião que não saem da sua máquina
 
+[![Ata: sua reunião vira ata](guia/assets/banner.jpg)](https://inematds.github.io/ata/guia/)
+
 **🇧🇷 [Português](README.md) · 🇺🇸 [English](README.en.md) · 🇪🇸 [Español](README.es.md)**
 
 ## 📖 Guia de uso

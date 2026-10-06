@@ -6,3 +6,5 @@
 - Bloco A CONCLUÍDO (81 testes + linux_audio real ok). start(backend=nome); stop bloqueia até processar; exceções AlreadyRecording/NothingRecording/CaptureMissing.
 - Bloco C CONCLUÍDO (92 testes). API do NeMo-Speech.cpp é suposição documentada em nemo.py; sha256 vazios no models.toml (install exige --allow-unverified).
 - Bloco D CONCLUÍDO (103 testes). Pendências vistas: 2 falhas em tests/engines nemo (C) na suíte completa, 2 no MCP do E (KeyError ata.pipeline no conftest dele). E falta: demo, revisar mcp/dashboard/live.
+- Bloco E CONCLUÍDO. Suíte 450 passed. Critérios goal.md OK: help (25 comandos), demo pt/en/es fake → note:, dry-run crunchlog/2, search/ask com [reunião, mm:ss], MCP 19 tools, dashboard 200/403, limites OK, crunchlog intacto.
+- Próximo: guia trilíngue + READMEs EN/ES + repo público + portal.
